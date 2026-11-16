@@ -1,0 +1,2803 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>UPM Cab Co-Pilot</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="UPM Cab">
+  <meta name="theme-color" content="#090d16">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%23090d16%22/><circle cx=%2250%22 cy=%2250%22 r=%2238%22 fill=%22%2310b981%22/><text y=%2268%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2250%22>🚕</text></svg>">
+  <style>
+    :root {
+      --bg: #090d16;
+      --surface: #0f1623;
+      --surface-2: #0a101b;
+      --surface-3: #172033;
+      --border: #1e293b;
+      --border-strong: #334155;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --emerald: #10b981;
+      --emerald-dark: #059669;
+      --emerald-soft: rgba(16, 185, 129, 0.14);
+      --amber: #f59e0b;
+      --amber-soft: rgba(245, 158, 11, 0.14);
+      --rose: #f43f5e;
+      --rose-soft: rgba(244, 63, 94, 0.16);
+      --sky: #0ea5e9;
+      --indigo: #6366f1;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100dvh;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    }
+
+    button, a, input, select, textarea {
+      font-family: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      background: none;
+      color: inherit;
+      touch-action: manipulation;
+    }
+
+    button:active, .tap:active {
+      transform: scale(0.97);
+    }
+
+    .hidden { display: none !important; }
+    .mono { font-family: var(--font-mono); }
+
+    /* Top Sticky Cockpit Header */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(9, 13, 22, 0.94);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8px;
+    }
+
+    .topbar-inner {
+      max-width: 460px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .brand-btn {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+      text-align: left;
+      padding: 4px 6px 4px 2px;
+      border-radius: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, var(--emerald-dark), #14b8a6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    }
+
+    .brand-meta { min-width: 0; }
+    .brand-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .brand-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .plate-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(59, 130, 246, 0.18);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      white-space: nowrap;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+    .brand-sub span.edit-hint {
+      color: #34d399;
+      font-weight: 700;
+      margin-left: 4px;
+    }
+
+    .earn-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 6px 10px;
+      flex-shrink: 0;
+    }
+    .earn-rm {
+      font-size: 13px;
+      font-weight: 800;
+      color: #34d399;
+      line-height: 1.1;
+      text-align: right;
+    }
+    .earn-lbl {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-align: right;
+    }
+    .earn-trips {
+      border-left: 1px solid var(--border);
+      padding-left: 8px;
+      text-align: center;
+      line-height: 1.05;
+    }
+    .earn-trips strong {
+      display: block;
+      font-size: 12px;
+      color: #fff;
+    }
+    .earn-trips span {
+      font-size: 9px;
+      color: var(--text-dim);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 460px;
+      margin: 0 auto;
+      padding: 10px 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    /* 1-Line Compact Radar Strip */
+    .radar-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: linear-gradient(90deg, rgba(49, 46, 129, 0.42), rgba(15, 22, 35, 0.96));
+      border: 1px solid rgba(99, 102, 241, 0.32);
+      border-radius: 12px;
+      padding: 8px 11px;
+      font-size: 11px;
+    }
+    .radar-left {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      flex: 1;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--emerald);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22);
+      flex-shrink: 0;
+    }
+    .radar-title {
+      font-weight: 700;
+      color: #e0e7ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .radar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge-normal {
+      background: var(--emerald-soft);
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+    .badge-peak {
+      background: var(--amber-soft);
+      color: #fcd34d;
+      border-color: rgba(245, 158, 11, 0.45);
+    }
+    .badge-warn {
+      background: var(--rose-soft);
+      color: #fda4af;
+      border-color: rgba(244, 63, 94, 0.45);
+    }
+    .badge-muted {
+      background: var(--surface-3);
+      color: var(--text-muted);
+      border-color: var(--border-strong);
+    }
+
+    /* Snipe / Quoter Mode Switcher inside Tab 1 */
+    .mode-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 4px;
+      border-radius: 12px;
+    }
+    .mode-btn {
+      min-height: 40px;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .mode-btn.active {
+      background: var(--emerald-dark);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(5, 150, 105, 0.35);
+    }
+
+    /* Inputs & Textareas */
+    .textarea-snipe {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.45;
+      resize: none;
+      outline: none;
+    }
+    .textarea-snipe:focus {
+      border-color: var(--emerald);
+    }
+    .textarea-snipe::placeholder, .input-field::placeholder {
+      color: var(--text-dim);
+    }
+
+    .input-field, .select-field {
+      width: 100%;
+      min-height: 44px;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 11px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+    }
+    .input-field:focus, .select-field:focus {
+      border-color: var(--emerald);
+    }
+
+    /* Thumb-Friendly Buttons (min 44px height) */
+    .paste-bar {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-primary-sm {
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 11px;
+      background: rgba(16, 185, 129, 0.18);
+      border: 1.5px solid rgba(16, 185, 129, 0.45);
+      color: #6ee7b7;
+      font-size: 13px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-ghost {
+      min-height: 44px;
+      padding: 0 12px;
+      border-radius: 11px;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    /* Scrollable Quick Chips */
+    .chip-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 2px 0;
+      scrollbar-width: none;
+    }
+    .chip-row::-webkit-scrollbar { display: none; }
+
+    .chip {
+      flex-shrink: 0;
+      min-height: 36px;
+      padding: 6px 11px;
+      border-radius: 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-strong);
+      color: #e2e8f0;
+      font-size: 11.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .chip.active-chip {
+      background: var(--emerald-soft);
+      border-color: var(--emerald);
+      color: #6ee7b7;
+    }
+
+    /* Unified Action Cockpit */
+    .cockpit {
+      background: linear-gradient(180deg, #0e1624 0%, #090e18 100%);
+      border: 2px solid rgba(16, 185, 129, 0.55);
+      border-radius: 16px;
+      padding: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    }
+
+    .cockpit-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .route-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.28;
+      word-break: break-word;
+    }
+
+    .meta-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    /* Big 48x48 Fare Adjuster */
+    .fare-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 4px;
+      border-radius: 13px;
+    }
+    .fare-step {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      color: #fff;
+      font-size: 20px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .fare-value {
+      min-width: 58px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 800;
+      color: #34d399;
+      letter-spacing: -0.02em;
+    }
+
+    /* Missing location quick-fix strip */
+    .ambiguous-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 12px;
+      padding: 9px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .ambiguous-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #fcd34d;
+    }
+
+    /* Primary 52px WhatsApp CTA */
+    .wa-cta {
+      width: 100%;
+      min-height: 52px;
+      padding: 10px 14px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #059669, #0d9488);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    }
+    .wa-cta.warn-cta {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      box-shadow: 0 6px 20px rgba(217, 119, 6, 0.25);
+    }
+    .wa-cta.pm-cta {
+      background: linear-gradient(135deg, #334155, #1e293b);
+      box-shadow: none;
+      border: 1px solid var(--border-strong);
+    }
+
+    /* 4-Button Thumb Action Row */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .action-btn {
+      min-height: 46px;
+      padding: 6px 4px;
+      border-radius: 11px;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      font-size: 10.5px;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      text-align: center;
+    }
+    .action-btn.waze {
+      background: rgba(14, 165, 233, 0.16);
+      border-color: rgba(14, 165, 233, 0.4);
+      color: #7dd3fc;
+    }
+    .action-btn.log {
+      background: rgba(99, 102, 241, 0.22);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #c7d2fe;
+    }
+    .action-btn.logged {
+      background: var(--emerald-soft);
+      border-color: var(--emerald);
+      color: #6ee7b7;
+    }
+
+    /* Collapsible More Tools */
+    .more-toggle {
+      width: 100%;
+      min-height: 36px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+    .more-drawer {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 4px;
+    }
+    .sub-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .sub-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .mini-btn {
+      min-height: 42px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-strong);
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      text-decoration: none;
+    }
+
+    /* Offer Preview Bubble */
+    .offer-preview {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 9px 11px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #cbd5e1;
+      white-space: pre-line;
+      line-height: 1.45;
+    }
+
+    /* Quoter Controls */
+    .quoter-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .field-lbl {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+    }
+    .swap-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .swap-btn {
+      min-width: 44px;
+      min-height: 44px;
+      border-radius: 12px;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Toggle Switch */
+    .toggle-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.32);
+      border-radius: 12px;
+      padding: 9px 12px;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #1e293b;
+      border-radius: 999px;
+      transition: 0.2s;
+      border: 1px solid #334155;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 2px;
+      top: 2px;
+      background: #fff;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+    .switch input:checked + .slider {
+      background: var(--amber);
+      border-color: var(--amber);
+    }
+    .switch input:checked + .slider::before {
+      transform: translateX(20px);
+    }
+
+    .addon-btn {
+      min-height: 44px;
+      padding: 8px 10px;
+      border-radius: 11px;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border-strong);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .addon-btn.active {
+      background: var(--emerald-soft);
+      border-color: var(--emerald);
+      color: #a7f3d0;
+    }
+
+    /* Rate Directory Rows */
+    .rate-cat-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #34d399;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rate-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 6px;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.7);
+      width: 100%;
+      text-align: left;
+    }
+    .rate-item:last-child { border-bottom: 0; }
+    .rate-name { font-size: 12.5px; font-weight: 700; color: var(--text); }
+    .rate-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .rate-rm { font-size: 14px; font-weight: 800; color: #34d399; white-space: nowrap; }
+
+    /* Daily Trip History Rows */
+    .trip-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.65);
+      font-size: 12px;
+    }
+    .trip-row:last-child { border-bottom: 0; }
+
+    /* Radio Option Cards in Tab 3 */
+    .radio-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 10px;
+      cursor: pointer;
+    }
+    .radio-card input { margin-top: 3px; accent-color: var(--emerald); }
+
+    /* Sticky Bottom Thumb Navigation */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      background: rgba(9, 13, 22, 0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px));
+    }
+    .bottom-nav-inner {
+      max-width: 460px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .nav-btn {
+      min-height: 48px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .nav-btn.active {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      font-weight: 800;
+    }
+    .nav-btn span.ico { font-size: 17px; line-height: 1; }
+
+    /* Floating Interactive Toast (with inline Undo) */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%) translateY(10px);
+      background: rgba(15, 22, 35, 0.97);
+      border: 1.5px solid rgba(16, 185, 129, 0.55);
+      color: #a7f3d0;
+      padding: 9px 13px;
+      border-radius: 13px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 60;
+      max-width: calc(100vw - 24px);
+    }
+    .toast.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast-undo {
+      padding: 5px 10px;
+      border-radius: 8px;
+      background: rgba(245, 158, 11, 0.22);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #fcd34d;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    /* Live SSE Feed Items */
+    .feed-card {
+      background: var(--surface-2);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP STICKY HEADER -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <button type="button" class="brand-btn" onclick="switchView('car')" title="Tukar detail kereta & nombor plat">
+        <div class="brand-icon">🚕</div>
+        <div class="brand-meta">
+          <div class="brand-top">
+            <span class="brand-title">UPM Cab</span>
+            <span id="headerPlateBadge" class="plate-badge">VMR 1027</span>
+          </div>
+          <div class="brand-sub">
+            <span id="headerCarText">Proton S70 Dark Blue</span>
+            <span class="edit-hint">✎ Tukar</span>
+          </div>
+        </div>
+      </button>
+
+      <button type="button" class="earn-pill" onclick="switchView('rates'); setTimeout(() => document.getElementById('earningsSummaryBox')?.scrollIntoView({behavior:'smooth'}), 50);" title="Lihat rekod kutipan hari ini">
+        <div>
+          <div class="earn-lbl">Hari Ini</div>
+          <div class="earn-rm">RM <span id="todayEarnings">0</span></div>
+        </div>
+        <div class="earn-trips">
+          <strong id="todayTripCount">0</strong>
+          <span>trip</span>
+        </div>
+      </button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: SNIPE + QUOTER UNIFIED COCKPIT      -->
+    <!-- ========================================== -->
+    <section id="sniperView" style="display:flex; flex-direction:column; gap:10px;">
+
+      <!-- 1-Line Compact Standby Radar Strip -->
+      <div class="radar-strip">
+        <div class="radar-left">
+          <span class="pulse-dot"></span>
+          <span id="hotspotTitle" class="radar-title">Standby: Serumpun / Central UPM</span>
+        </div>
+        <div class="radar-right">
+          <span id="radarPeakBadge" class="badge badge-normal">NORMAL</span>
+          <span id="currentClockText" class="mono" style="font-size:11px; font-weight:700; color:#cbd5e1;">--:--</span>
+        </div>
+      </div>
+
+      <!-- Mode Switcher: Snipe Telegram vs Manual Route Quoter -->
+      <div class="mode-switch">
+        <button type="button" id="modeSnipeBtn" class="mode-btn active" onclick="setCockpitMode('snipe')">
+          <span>🎯</span> <span>Snipe Mesej</span>
+        </button>
+        <button type="button" id="modeQuoteBtn" class="mode-btn" onclick="setCockpitMode('quote')">
+          <span>⚡</span> <span>Kira Laluan</span>
+        </button>
+      </div>
+
+      <!-- PANEL A: SNIPE MESEJ INPUT -->
+      <div id="snipeInputPanel" class="card">
+        <textarea id="rawLeadInput" class="textarea-snipe" rows="3" oninput="parseRawLead()" placeholder="Tampal mesej Telegram di sini (cth: From Serumpun To MRT UPM, 017...)"></textarea>
+
+        <div class="paste-bar">
+          <button type="button" class="btn-primary-sm" onclick="pasteFromClipboard()">
+            <span>📥</span> <span>Tampal &amp; Snipe</span>
+          </button>
+          <button type="button" class="btn-ghost" onclick="loadSampleLead()" title="Cuba contoh mesej">
+            <span>🧪</span> <span>Contoh</span>
+          </button>
+          <button type="button" class="btn-ghost" onclick="clearLeadInput()" title="Padam teks">
+            <span>🗑️</span> <span>Padam</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PANEL B: MANUAL ROUTE QUOTER INPUT -->
+      <div id="quoterInputPanel" class="card quoter-panel hidden">
+        <div class="toggle-card">
+          <div>
+            <div style="font-size:12px; font-weight:800; color:#fde68a;">⚡ Peak Hour Surge</div>
+            <div id="autoPeakTag" style="font-size:10.5px; color:#fcd34d; opacity:0.85;">Auto (7-9.30AM / 4.30-8PM)</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="peakHourToggle" onchange="manualTogglePeak()">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- 1-Tap Popular Route Chips -->
+        <div class="chip-row">
+          <button type="button" class="chip" onclick="setPreset('mrt_upm', 'k12_serumpun')">🚆 MRT ➔ Serumpun (RM8)</button>
+          <button type="button" class="chip" onclick="setPreset('mrt_upm', 'k10')">🚆 MRT ➔ K10 (RM6)</button>
+          <button type="button" class="chip" onclick="setPreset('ktdi', 'mrt_upm')">🚆 KTDI ➔ MRT (RM7)</button>
+          <button type="button" class="chip" onclick="setPreset('k10', 'sri_serdang')">🍔 K10 ➔ Sri Serdang (RM5)</button>
+          <button type="button" class="chip" onclick="setPreset('kmb', 'ioi_city_mall')">🛍️ KMB ➔ IOI (RM5)</button>
+          <button type="button" class="chip" onclick="setPreset('k12_serumpun', 'ioi_city_mall')">🛍️ Kolej ➔ IOI (RM10)</button>
+          <button type="button" class="chip" onclick="setPreset('k12_serumpun', 'ktm_serdang')">🚂 Kolej ➔ KTM (RM10)</button>
+        </div>
+
+        <div>
+          <div class="field-lbl">
+            <span>🟢 Lokasi Ambil (Pickup)</span>
+            <input type="text" id="pickupFilterInput" oninput="filterLocationSelect('pickup')" placeholder="Cari cepat..." style="background:#0a101b; border:1px solid #334155; color:#fff; border-radius:7px; padding:3px 8px; font-size:11px; width:125px; outline:none;">
+          </div>
+          <div class="chip-row" style="margin-bottom:6px;">
+            <button type="button" class="chip" onclick="quickPickSide('pickup', 'k12_serumpun')">Serumpun</button>
+            <button type="button" class="chip" onclick="quickPickSide('pickup', 'k10')">K10</button>
+            <button type="button" class="chip" onclick="quickPickSide('pickup', 'ktdi')">KTDI</button>
+            <button type="button" class="chip" onclick="quickPickSide('pickup', 'kaa')">KAA</button>
+            <button type="button" class="chip" onclick="quickPickSide('pickup', 'mrt_upm')">MRT UPM</button>
+            <button type="button" class="chip" onclick="quickPickSide('pickup', 'kmb')">KMB/K17</button>
+          </div>
+          <select id="pickupSelect" class="select-field" onchange="calculateFare()"></select>
+        </div>
+
+        <div class="swap-row">
+          <span style="font-size:11px; color:var(--text-dim); font-weight:700;">Tukar arah pickup &amp; dropoff</span>
+          <button type="button" class="swap-btn" onclick="swapLocations()" title="Tukar arah">⇅</button>
+        </div>
+
+        <div>
+          <div class="field-lbl">
+            <span>🔴 Lokasi Hantar (Drop-off)</span>
+            <input type="text" id="dropoffFilterInput" oninput="filterLocationSelect('dropoff')" placeholder="Cari cepat..." style="background:#0a101b; border:1px solid #334155; color:#fff; border-radius:7px; padding:3px 8px; font-size:11px; width:125px; outline:none;">
+          </div>
+          <div class="chip-row" style="margin-bottom:6px;">
+            <button type="button" class="chip" onclick="quickPickSide('dropoff', 'mrt_upm')">MRT UPM</button>
+            <button type="button" class="chip" onclick="quickPickSide('dropoff', 'sri_serdang')">Sri Serdang</button>
+            <button type="button" class="chip" onclick="quickPickSide('dropoff', 'ioi_city_mall')">IOI Mall</button>
+            <button type="button" class="chip" onclick="quickPickSide('dropoff', 'ktm_serdang')">KTM Serdang</button>
+            <button type="button" class="chip" onclick="quickPickSide('dropoff', 'kaa')">KAA</button>
+            <button type="button" class="chip" onclick="quickPickSide('dropoff', 'tbs')">TBS</button>
+          </div>
+          <select id="dropoffSelect" class="select-field" onchange="calculateFare()"></select>
+        </div>
+
+        <div class="sub-grid-2">
+          <button type="button" id="extraStopBtn" class="addon-btn" onclick="toggleAddon('extraStop')">
+            <span>📍 +1 Extra Stop</span>
+            <span style="color:#34d399;">+RM2</span>
+          </button>
+          <button type="button" id="lateNightBtn" class="addon-btn" onclick="toggleAddon('lateNight')">
+            <span>🌙 12AM+</span>
+            <span style="color:#c084fc;">+RM3</span>
+          </button>
+        </div>
+
+        <input type="tel" id="quoterPhoneInput" class="input-field mono" oninput="onQuoterPhoneInput()" placeholder="No. WhatsApp pelajar (pilihan, cth: 0123456789)">
+      </div>
+
+      <!-- UNIFIED ACTION COCKPIT (Shared for both Snipe & Quoter) -->
+      <div id="actionCockpit" class="cockpit hidden">
+        <div class="cockpit-head">
+          <div style="min-width:0; flex:1;">
+            <div id="activeRouteText" class="route-title">Serumpun ➔ MRT UPM</div>
+            <div class="meta-line">
+              <span id="activePaxBadge" class="badge badge-muted">👥 1 Pax</span>
+              <span id="activeTimeText" class="mono">⏰ now</span>
+              <span id="activePhoneText" class="mono" style="color:#34d399; font-weight:700;"></span>
+              <span id="repliedWarningBadge" class="badge badge-peak hidden">⚠️ Dah Reply</span>
+            </div>
+          </div>
+
+          <div class="fare-box">
+            <button type="button" class="fare-step" onclick="adjustActiveFare(-1)" aria-label="Kurang RM1">−</button>
+            <div class="fare-value">RM<span id="activeFareAmount">8</span></div>
+            <button type="button" class="fare-step" onclick="adjustActiveFare(1)" aria-label="Tambah RM1">+</button>
+          </div>
+        </div>
+
+        <!-- Honest Ambiguity Resolver (Shown ONLY when parser couldn't identify pickup/dropoff) -->
+        <div id="ambiguousFixBox" class="ambiguous-box hidden">
+          <div id="ambiguousFixTitle" class="ambiguous-title">❓ Lokasi tak pasti — tap untuk tetapkan cepat:</div>
+          <div id="ambiguousFixTargetRow" class="chip-row">
+            <button type="button" class="chip" onclick="fixAmbiguousLocation('k12_serumpun', 'Serumpun')">Serumpun</button>
+            <button type="button" class="chip" onclick="fixAmbiguousLocation('k10', 'K10')">K10</button>
+            <button type="button" class="chip" onclick="fixAmbiguousLocation('ktdi', 'KTDI')">KTDI</button>
+            <button type="button" class="chip" onclick="fixAmbiguousLocation('kaa', 'KAA')">KAA</button>
+            <button type="button" class="chip" onclick="fixAmbiguousLocation('mrt_upm', 'MRT UPM')">MRT UPM</button>
+            <button type="button" class="chip" onclick="fixAmbiguousLocation('sri_serdang', 'Sri Serdang')">Sri Serdang</button>
+            <button type="button" class="chip" onclick="fixAmbiguousLocation('ioi_city_mall', 'IOI Mall')">IOI Mall</button>
+            <button type="button" class="chip" onclick="fixAmbiguousLocation('ktm_serdang', 'KTM Serdang')">KTM Serdang</button>
+          </div>
+        </div>
+
+        <!-- Contextual Quick Fare Chips (max 4 relevant prices) + Grab Estimate -->
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <div id="smartFareChips" class="chip-row" style="flex:1;"></div>
+          <span id="grabSaveBadge" style="font-size:10.5px; font-weight:700; color:#fcd34d; white-space:nowrap;"></span>
+        </div>
+
+        <!-- Live WhatsApp Message Preview (Price ALWAYS at the end) -->
+        <div id="activeOfferPreview" class="offer-preview"></div>
+
+        <!-- PRIMARY 52px WHATSAPP CTA (Native <a> without target="_blank") -->
+        <a id="directWhatsAppLink" href="#" class="wa-cta" onclick="handlePrimaryWhatsAppClick(event)">
+          <span id="waBtnIcon" style="font-size:18px;">🟢</span>
+          <span id="waBtnLabel">Buka WhatsApp &amp; Hantar Offer (RM8)</span>
+        </a>
+
+        <!-- 4 Core Thumb Actions -->
+        <div class="action-grid">
+          <button type="button" class="action-btn" onclick="copyArrivedMsg()">
+            <span>📍</span>
+            <span>Dah Sampai</span>
+          </button>
+          <button type="button" class="action-btn waze" onclick="openActiveWaze('pickup')">
+            <span>🚗</span>
+            <span>Waze Ambil</span>
+          </button>
+          <button type="button" class="action-btn waze" onclick="openActiveWaze('dropoff')">
+            <span>🏁</span>
+            <span>Waze Hantar</span>
+          </button>
+          <button type="button" id="logTripBtn" class="action-btn log" onclick="recordActiveTrip()">
+            <span>➕</span>
+            <span id="logTripBtnText">Catat Trip</span>
+          </button>
+        </div>
+
+        <!-- Collapsible Secondary Drawer (Maps, wa.me fallback, Salin Teks, Luar Kampus Estimator) -->
+        <button type="button" class="more-toggle" onclick="toggleMoreDrawer()">
+          <span id="moreToggleText">⋯ Lagi (Google Maps, wa.me, Kira KM Luar)</span>
+        </button>
+
+        <div id="moreDrawer" class="more-drawer hidden">
+          <div class="sub-grid-3">
+            <a id="fallbackWaWebLink" href="#" class="mini-btn" onclick="handleFallbackWaWebClick(event)">🌐 Buka wa.me</a>
+            <button type="button" class="mini-btn" onclick="copyActiveOffer()">📋 Salin Offer</button>
+            <button type="button" class="mini-btn" onclick="copyCarDetails()">🚗 OTW Kereta</button>
+          </div>
+
+          <div class="sub-grid-3">
+            <button type="button" class="mini-btn" onclick="openActiveMaps('pickup')">📍 Maps Ambil</button>
+            <button type="button" class="mini-btn" onclick="openActiveMaps('dropoff')">🏁 Maps Hantar</button>
+            <button type="button" class="mini-btn" onclick="openActiveMaps('full')">🗺️ Laluan Penuh</button>
+          </div>
+
+          <!-- Optional Off-Campus Distance Calculator (Tucked neatly inside drawer) -->
+          <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:11px; padding:10px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:800; color:#fcd34d;">
+              <span>📏 Kalkulator Luar Kampus (Pilihan)</span>
+              <button type="button" onclick="openActiveMaps('traffic')" style="color:#67e8f9; font-size:10.5px; font-weight:700;">🚦 Cek Jam Maps</button>
+            </div>
+            <div class="sub-grid-2">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:11px; color:var(--text-muted);">KM:</span>
+                <button type="button" class="mini-btn" style="min-height:36px; width:36px;" onclick="adjustCustomEstimateKm(-1)">−</button>
+                <input type="number" id="customKmInput" value="10" min="1" max="150" oninput="recalcCustomEstimate()" class="input-field mono" style="min-height:36px; text-align:center; padding:4px;">
+                <button type="button" class="mini-btn" style="min-height:36px; width:36px;" onclick="adjustCustomEstimateKm(1)">+</button>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:11px; color:var(--text-muted);">Min:</span>
+                <button type="button" class="mini-btn" style="min-height:36px; width:36px;" onclick="adjustCustomEstimateMin(-2)">−</button>
+                <input type="number" id="customMinInput" value="16" min="3" max="240" oninput="recalcCustomEstimate()" class="input-field mono" style="min-height:36px; text-align:center; padding:4px;">
+                <button type="button" class="mini-btn" style="min-height:36px; width:36px;" onclick="adjustCustomEstimateMin(2)">+</button>
+              </div>
+            </div>
+            <div class="sub-grid-3">
+              <button type="button" id="trafficBtnLancar" class="mini-btn" style="min-height:36px;" onclick="setTrafficLevel('lancar')">🟢 Lancar</button>
+              <button type="button" id="trafficBtnSederhana" class="mini-btn" style="min-height:36px; border-color:var(--amber); color:#fcd34d;" onclick="setTrafficLevel('sederhana')">🟡 Slow</button>
+              <button type="button" id="trafficBtnSesak" class="mini-btn" style="min-height:36px;" onclick="setTrafficLevel('sesak')">🔴 Jem</button>
+            </div>
+            <button type="button" class="mini-btn" style="border-color:rgba(16,185,129,0.45); color:#6ee7b7;" onclick="applyCustomEstimateToActive()">
+              Terap Harga Kiraan: RM <span id="customEstFareText">15</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State Helper (when no lead pasted yet in Snipe mode) -->
+      <div id="emptySnipeHint" class="card" style="text-align:center; padding:18px 14px; color:var(--text-muted); font-size:12px; line-height:1.5;">
+        Salin mesej dari group <strong style="color:#fff;">Student Cab UPM</strong> kemudian tekan <strong style="color:#34d399;">📥 Tampal &amp; Snipe</strong>.<br>
+        Atau tukar ke tab <strong style="color:#fff;">⚡ Kira Laluan</strong> untuk kira tambang manual.
+      </div>
+
+      <!-- Conditional Live SSE Feed (Hidden on Netlify unless running localhost/LAN sniper.py) -->
+      <div id="liveSseSection" class="card hidden" style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:6px; border-bottom:1px solid var(--border);">
+          <span style="font-size:11.5px; font-weight:800; text-transform:uppercase; color:var(--text-muted);">📡 Live Telegram Stream</span>
+          <span id="sseStatusBadge" class="badge badge-normal">Connecting...</span>
+        </div>
+        <div id="liveFeedContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: HARGA RASMI & REKOD TRIP            -->
+    <!-- ========================================== -->
+    <section id="rateCardView" class="hidden" style="display:flex; flex-direction:column; gap:10px;">
+      <input type="text" id="rateSearchInput" class="input-field" oninput="filterRates()" placeholder="🔍 Cari kolej, fakulti, MRT, IOI, TBS...">
+
+      <div style="font-size:11px; color:var(--text-muted); padding:0 2px;">
+        💡 Tap mana-mana harga untuk terus buka di <strong style="color:#fff;">⚡ Kira Laluan</strong>.
+      </div>
+
+      <!-- Sekitar Kampus -->
+      <div class="card rate-card-category">
+        <div class="rate-cat-title">
+          <span>🏫 Sekitar Kampus &amp; Kolej</span>
+          <span class="badge badge-normal">Tetap</span>
+        </div>
+        <div>
+          <button type="button" class="rate-item" onclick="setPreset('k12_serumpun', 'kaa')">
+            <div>
+              <div class="rate-name">Dalam Kampus (Kolej ➔ Fakulti / KAA / PFC)</div>
+              <div class="rate-sub">Serumpun, K10, K11, KTDI, KC, KPZ, KOSASS, KTAG, KMR</div>
+            </div>
+            <div class="rate-rm">RM 6</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('k10', 'sri_serdang')">
+            <div>
+              <div class="rate-name">K10 ➔ Sri Serdang</div>
+              <div class="rate-sub">McD Sri Serdang, Flat Ikan, Olive Hill</div>
+            </div>
+            <div class="rate-rm">RM 5</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('k12_serumpun', 'sri_serdang')">
+            <div>
+              <div class="rate-name">Kolej Lain ➔ Sri Serdang</div>
+              <div class="rate-sub">Serumpun, KTDI, KC, KPZ, KOSASS, K11</div>
+            </div>
+            <div class="rate-rm">RM 7</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('kmb', 'kaa')">
+            <div>
+              <div class="rate-name">KTMB / K17 / KMB &amp; HSAAS ➔ Kampus Utama</div>
+              <div class="rate-sub">Kolej Mustaffa Babjee (Medic/Vet) &amp; Hospital UPM</div>
+            </div>
+            <div class="rate-rm">RM 7</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- MRT UPM -->
+      <div class="card rate-card-category">
+        <div class="rate-cat-title" style="color:#2dd4bf;">
+          <span>🚇 MRT UPM (Putrajaya Line)</span>
+          <span class="badge badge-normal">Benchmark</span>
+        </div>
+        <div>
+          <button type="button" class="rate-item" onclick="setPreset('mrt_upm', 'kaa')">
+            <div class="rate-name">MRT UPM ➔ Main Campus / KAA / K10</div>
+            <div class="rate-rm">RM 6</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('mrt_upm', 'ktdi')">
+            <div class="rate-name">MRT UPM ➔ KTDI, KC, KOSASS, KPZ, KMR, K11</div>
+            <div class="rate-rm">RM 7</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('mrt_upm', 'k12_serumpun')">
+            <div class="rate-name">MRT UPM ➔ Kolej Serumpun (K12, K14, P1-P6, L1-L6)</div>
+            <div class="rate-rm">RM 8</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('mrt_upm', 'kmb')">
+            <div class="rate-name">MRT UPM ➔ KTMB / K17 / KMB &amp; HSAAS</div>
+            <div class="rate-rm">RM 10</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mall, Transit & Luar -->
+      <div class="card rate-card-category">
+        <div class="rate-cat-title" style="color:#60a5fa;">
+          <span>🏙️ Mall, Stesen &amp; Luar</span>
+          <span class="badge badge-peak">Normal / Peak</span>
+        </div>
+        <div>
+          <button type="button" class="rate-item" onclick="setPreset('k12_serumpun', 'ioi_city_mall')">
+            <div>
+              <div class="rate-name">IOI City Mall (Dari Kolej Utama)</div>
+              <div class="rate-sub">Peak Hour: RM 15</div>
+            </div>
+            <div class="rate-rm">RM 10</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('kmb', 'ioi_city_mall')">
+            <div>
+              <div class="rate-name">IOI City Mall (Dari KTMB / K17 / KMB)</div>
+              <div class="rate-sub">Peak Hour: RM 7</div>
+            </div>
+            <div class="rate-rm">RM 5</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('k12_serumpun', 'ktm_serdang')">
+            <div>
+              <div class="rate-name">KTM Serdang Station</div>
+              <div class="rate-sub">Peak Hour: RM 12</div>
+            </div>
+            <div class="rate-rm">RM 10</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('k12_serumpun', 'the_mines')">
+            <div class="rate-name">The Mines Shopping Mall</div>
+            <div class="rate-rm">RM 12</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('k12_serumpun', 'de_centrum')">
+            <div class="rate-name">De Centrum / UNITEN / Hospital Serdang</div>
+            <div class="rate-rm">RM 8</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('k12_serumpun', 'tbs')">
+            <div>
+              <div class="rate-name">TBS / Putrajaya Sentral</div>
+              <div class="rate-sub">Peak Hour: RM 25</div>
+            </div>
+            <div class="rate-rm">RM 20</div>
+          </button>
+          <button type="button" class="rate-item" onclick="setPreset('k12_serumpun', 'klia')">
+            <div class="rate-name">KLIA 1 / KLIA 2</div>
+            <div class="rate-rm">RM 60</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Daily Earnings Log -->
+      <div id="earningsSummaryBox" class="card" style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div>
+            <div style="font-size:13px; font-weight:800; color:#fff;">💰 Kutipan Hari Ini</div>
+            <div style="font-size:11px; color:var(--text-muted);">Jumlah: <strong style="color:#34d399;">RM <span id="logTotalDisplay">0</span></strong> (<span id="logCountDisplay">0</span> trip)</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="mini-btn" style="min-height:38px; color:#fcd34d;" onclick="undoLastTrip()">↩ Undo</button>
+            <button type="button" class="mini-btn" style="min-height:38px; color:#fda4af;" onclick="resetEarnings()">🗑️ Reset</button>
+          </div>
+        </div>
+        <div id="tripHistoryList" style="font-size:11.5px; color:var(--text-muted);">Belum ada trip direkod hari ini.</div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: KERETA, PLAT & TETAPAN WHATSAPP     -->
+    <!-- ========================================== -->
+    <section id="carSettingsView" class="hidden" style="display:flex; flex-direction:column; gap:10px;">
+      <div class="card" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px;">
+          <div>
+            <div style="font-size:13px; font-weight:800; color:#fff;">🚗 Detail Kereta &amp; No. Plat</div>
+            <div style="font-size:11px; color:var(--text-muted);">Dikemas kini dalam semua mesej WhatsApp</div>
+          </div>
+          <span class="badge badge-normal">Auto Sync</span>
+        </div>
+
+        <div id="carWhatsappPreview" class="offer-preview"></div>
+
+        <form id="carProfileForm" onsubmit="saveDriverProfile(event)" style="display:flex; flex-direction:column; gap:10px;">
+          <div>
+            <label class="field-lbl" for="inputCarModel">Model Kereta</label>
+            <input type="text" id="inputCarModel" class="input-field" oninput="updateCarLivePreview()" placeholder="Proton S70" required>
+          </div>
+          <div>
+            <label class="field-lbl" for="inputCarColor">Warna Kereta</label>
+            <input type="text" id="inputCarColor" class="input-field" oninput="updateCarLivePreview()" placeholder="Dark Blue" required>
+          </div>
+          <div>
+            <label class="field-lbl" for="inputPlateNumber">Nombor Plat</label>
+            <input type="text" id="inputPlateNumber" class="input-field mono" style="color:#fcd34d; text-transform:uppercase; font-weight:800;" oninput="this.value=this.value.toUpperCase(); updateCarLivePreview();" placeholder="VMR 1027" required>
+          </div>
+
+          <div class="chip-row">
+            <button type="button" class="chip" onclick="setCarPreset('Proton S70', 'Dark Blue', 'VMR 1027')">Proton S70</button>
+            <button type="button" class="chip" onclick="setCarPreset('Perodua Bezza', 'Putih')">Bezza</button>
+            <button type="button" class="chip" onclick="setCarPreset('Perodua Myvi', 'Hitam')">Myvi</button>
+            <button type="button" class="chip" onclick="setCarPreset('Perodua Axia', 'Silver')">Axia</button>
+            <button type="button" class="chip" onclick="setCarPreset('Proton Saga', 'Maroon')">Saga</button>
+            <button type="button" class="chip" onclick="setCarPreset('Honda City', 'Putih')">City</button>
+          </div>
+
+          <button type="submit" class="wa-cta" style="min-height:48px;">
+            <span>💾</span> <span>Simpan Detail Kereta &amp; Plat</span>
+          </button>
+          <button type="button" onclick="resetDriverProfile()" style="font-size:11.5px; color:var(--text-dim); padding:6px; font-weight:700;">
+            Reset ke Asal (Proton S70 • VMR 1027)
+          </button>
+        </form>
+      </div>
+
+      <!-- iPhone Safari WhatsApp Fix Setting -->
+      <div class="card" style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:12.5px; font-weight:800; color:#fff;">📲 Mod Buka WhatsApp (iPhone Fix)</div>
+            <div style="font-size:11px; color:var(--text-muted);">Elak Safari paksa "Hold &amp; Click"</div>
+          </div>
+          <span class="badge badge-muted">Auto iOS</span>
+        </div>
+        <div class="sub-grid-2">
+          <label class="radio-card">
+            <input type="radio" name="waRedirectMode" value="native" onchange="saveWaRedirectMode('native')">
+            <div>
+              <div style="font-size:12px; font-weight:800; color:#34d399;">Direct App ⚡</div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">Skema <span class="mono">whatsapp://</span> (Terbaik untuk iPhone)</div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="waRedirectMode" value="web" onchange="saveWaRedirectMode('web')">
+            <div>
+              <div style="font-size:12px; font-weight:800; color:#e2e8f0;">Universal 🌐</div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">Pautan <span class="mono">wa.me</span> dalam tab sama</div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- STICKY BOTTOM THUMB NAVIGATION -->
+  <nav class="bottom-nav" role="tablist" aria-label="Navigasi Utama">
+    <div class="bottom-nav-inner">
+      <button type="button" id="tabSniperBtn" class="nav-btn active" onclick="switchView('snipe')">
+        <span class="ico">🎯</span>
+        <span>Snipe</span>
+      </button>
+      <button type="button" id="tabRatesBtn" class="nav-btn" onclick="switchView('rates')">
+        <span class="ico">📋</span>
+        <span>Harga &amp; Rekod</span>
+      </button>
+      <button type="button" id="tabCarBtn" class="nav-btn" onclick="switchView('car')">
+        <span class="ico">🚗</span>
+        <span>Kereta</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- FLOATING INTERACTIVE TOAST (WITH INLINE UNDO) -->
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <span id="toastMsg">Siap!</span>
+    <button type="button" id="toastUndoBtn" class="toast-undo hidden" onclick="undoLastTrip(); hideToast();">↩ Undo</button>
+  </div>
+
+  <script>
+    // =============================================================
+    // 1. DRIVER & VEHICLE PROFILE (Persistent LocalStorage)
+    // =============================================================
+    let driverProfile = {
+      carModel: "Proton S70",
+      carColor: "Dark Blue",
+      plateNumber: "VMR 1027"
+    };
+
+    function loadDriverProfile() {
+      try {
+        const saved = localStorage.getItem('upm_cab_driver_profile');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.carModel) driverProfile.carModel = String(parsed.carModel).trim();
+          if (parsed.carColor) driverProfile.carColor = String(parsed.carColor).trim();
+          if (parsed.plateNumber) driverProfile.plateNumber = String(parsed.plateNumber).trim().toUpperCase();
+        }
+      } catch (e) {}
+      applyDriverProfileUI();
+    }
+
+    function applyDriverProfileUI() {
+      const badge = document.getElementById('headerPlateBadge');
+      if (badge) badge.textContent = driverProfile.plateNumber || 'VMR 1027';
+
+      const carText = document.getElementById('headerCarText');
+      if (carText) carText.textContent = `${driverProfile.carModel} ${driverProfile.carColor}`.trim();
+
+      const inModel = document.getElementById('inputCarModel');
+      if (inModel) inModel.value = driverProfile.carModel;
+      const inColor = document.getElementById('inputCarColor');
+      if (inColor) inColor.value = driverProfile.carColor;
+      const inPlate = document.getElementById('inputPlateNumber');
+      if (inPlate) inPlate.value = driverProfile.plateNumber;
+
+      updateCarLivePreview();
+      renderActiveCockpit();
+    }
+
+    function updateCarLivePreview() {
+      const inModel = (document.getElementById('inputCarModel')?.value || driverProfile.carModel).trim();
+      const inColor = (document.getElementById('inputCarColor')?.value || driverProfile.carColor).trim();
+      const inPlate = (document.getElementById('inputPlateNumber')?.value || driverProfile.plateNumber).toUpperCase().trim().replace(/\s+/g, '') || 'VMR1027';
+
+      const previewBox = document.getElementById('carWhatsappPreview');
+      if (previewBox) {
+        previewBox.textContent =
+          `Hi! Dah ada driver belum? \n` +
+          `Saya student cab UPM, saya available sekarang boleh ambik Serumpun ➔ MRT UPM.\n` +
+          `${inModel} ${inColor}\n` +
+          `${inPlate}\n` +
+          `RM8`;
+      }
+    }
+
+    function saveDriverProfile(e) {
+      if (e) e.preventDefault();
+      driverProfile.carModel = (document.getElementById('inputCarModel')?.value || "Proton S70").trim();
+      driverProfile.carColor = (document.getElementById('inputCarColor')?.value || "Dark Blue").trim();
+      driverProfile.plateNumber = (document.getElementById('inputPlateNumber')?.value || "VMR 1027").trim().toUpperCase();
+      try {
+        localStorage.setItem('upm_cab_driver_profile', JSON.stringify(driverProfile));
+      } catch (err) {}
+      applyDriverProfileUI();
+      showToast("Detail kereta & plat disimpan!");
+    }
+
+    function resetDriverProfile() {
+      driverProfile = { carModel: "Proton S70", carColor: "Dark Blue", plateNumber: "VMR 1027" };
+      try { localStorage.removeItem('upm_cab_driver_profile'); } catch (err) {}
+      applyDriverProfileUI();
+      showToast("Profil kereta direset ke Proton S70 (VMR 1027)");
+    }
+
+    function setCarPreset(model, color, plate) {
+      const m = document.getElementById('inputCarModel');
+      const c = document.getElementById('inputCarColor');
+      const p = document.getElementById('inputPlateNumber');
+      if (m) m.value = model;
+      if (c) c.value = color;
+      if (plate && p) p.value = plate;
+      updateCarLivePreview();
+    }
+
+    // =============================================================
+    // 2. WHATSAPP MESSAGE FORMATTER (Price ALWAYS at Very End)
+    // =============================================================
+    function formatOfferText(from, to, fare) {
+      const plate = (driverProfile.plateNumber || 'VMR 1027').replace(/\s+/g, '');
+      const carInfo = `${driverProfile.carModel} ${driverProfile.carColor}`.trim();
+      return `Hi! Dah ada driver belum? \nSaya student cab UPM, saya available sekarang boleh ambik ${from} ➔ ${to}.\n${carInfo}\n${plate}\nRM${fare}`;
+    }
+
+    // =============================================================
+    // 3. iOS / ANDROID WHATSAPP DEEP-LINK ENGINE
+    // =============================================================
+    function isIOSDevice() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+             (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+    }
+
+    function getWaRedirectMode() {
+      try {
+        const saved = localStorage.getItem('upm_cab_wa_mode');
+        if (saved === 'native' || saved === 'web') return saved;
+      } catch (e) {}
+      return isIOSDevice() ? 'native' : 'web';
+    }
+
+    function saveWaRedirectMode(mode) {
+      try { localStorage.setItem('upm_cab_wa_mode', mode); } catch (e) {}
+      renderActiveCockpit();
+      showToast(`Mod WhatsApp: ${mode === 'native' ? 'Direct App (whatsapp://)' : 'Universal (wa.me)'}`);
+    }
+
+    function initWaRedirectModeUI() {
+      const mode = getWaRedirectMode();
+      const radio = document.querySelector(`input[name="waRedirectMode"][value="${mode}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    function normalizeMalaysianPhone(rawPhone) {
+      let clean = String(rawPhone || '').replace(/[^0-9]/g, '');
+      if (!clean) return '';
+      if (clean.startsWith('01')) return '6' + clean;
+      if (clean.startsWith('1') && (clean.length === 9 || clean.length === 10)) return '60' + clean;
+      if (!clean.startsWith('60') && clean.length >= 9) return '60' + clean;
+      return clean;
+    }
+
+    function buildWhatsAppHref(phone, messageText, directUrl, forceMode) {
+      const cleanPhone = normalizeMalaysianPhone(phone);
+      const encText = encodeURIComponent(messageText || '');
+      const mode = forceMode || getWaRedirectMode();
+      if (cleanPhone) {
+        return mode === 'native'
+          ? `whatsapp://send?phone=${cleanPhone}&text=${encText}`
+          : `https://wa.me/${cleanPhone}?text=${encText}`;
+      }
+      return directUrl || '#';
+    }
+
+    // =============================================================
+    // 4. LOCATION DICTIONARIES & GROUPED DROPDOWN BUILDER
+    // =============================================================
+    const locationCatalog = [
+      { group: "🏫 Kolej Kediaman UPM", key: "k12_serumpun", label: "Serumpun (K12 / K14 / P1-P6 / L1-L6)", short: "Serumpun", map: "Kolej Serumpun UPM" },
+      { group: "🏫 Kolej Kediaman UPM", key: "k10", label: "K10 (Kolej Sepuluh)", short: "K10", map: "Kolej Sepuluh (K10) UPM" },
+      { group: "🏫 Kolej Kediaman UPM", key: "k11", label: "K11 (Kolej Sebelas)", short: "K11", map: "Kolej Sebelas (K11) UPM" },
+      { group: "🏫 Kolej Kediaman UPM", key: "ktdi", label: "KTDI (Tun Dr Ismail)", short: "KTDI", map: "Kolej Tun Dr Ismail (KTDI) UPM" },
+      { group: "🏫 Kolej Kediaman UPM", key: "kpz", label: "KPZ (Pendeta Za'ba)", short: "KPZ", map: "Kolej Pendeta Za'ba (KPZ) UPM" },
+      { group: "🏫 Kolej Kediaman UPM", key: "kc", label: "KC (Kolej Canselor)", short: "KC", map: "Kolej Canselor UPM" },
+      { group: "🏫 Kolej Kediaman UPM", key: "kosass", label: "KOSASS", short: "KOSASS", map: "Kolej Sultan Alaeddin Suleiman Shah (KOSASS) UPM" },
+      { group: "🏫 Kolej Kediaman UPM", key: "ktag", label: "KTAG / K13", short: "KTAG (K13)", map: "Kolej Tan Sri Aishah Ghani (KTAG) UPM" },
+      { group: "🏫 Kolej Kediaman UPM", key: "kmr", label: "KMR (Mohamad Rashid)", short: "KMR", map: "Kolej Mohamad Rashid (KMR) UPM" },
+      { group: "🏫 Kolej Kediaman UPM", key: "kmb", label: "KTMB / K17 / KMB (Medic/Vet)", short: "KTMB / K17", map: "Kolej Tan Sri Mustaffa Babjee (K17) UPM" },
+
+      { group: "🚇 Stesen Transit & Airport", key: "mrt_upm", label: "MRT UPM (Putrajaya Line)", short: "MRT UPM", map: "Stesen MRT UPM (Pintu A)" },
+      { group: "🚇 Stesen Transit & Airport", key: "ktm_serdang", label: "KTM Serdang Station", short: "KTM Serdang", map: "Stesen KTM Serdang" },
+      { group: "🚇 Stesen Transit & Airport", key: "mrt_serdang_jaya", label: "MRT Serdang Jaya", short: "MRT Serdang Jaya", map: "Stesen MRT Serdang Jaya" },
+      { group: "🚇 Stesen Transit & Airport", key: "putrajaya_sentral", label: "Putrajaya Sentral", short: "Putrajaya Sentral", map: "Putrajaya Sentral" },
+      { group: "🚇 Stesen Transit & Airport", key: "tbs", label: "TBS (Terminal Bersepadu Selatan)", short: "TBS", map: "Terminal Bersepadu Selatan (TBS)" },
+      { group: "🚇 Stesen Transit & Airport", key: "klia", label: "KLIA 1 / KLIA 2", short: "KLIA 1/2", map: "Kuala Lumpur International Airport (KLIA)" },
+
+      { group: "📍 Fakulti & Kampus", key: "kaa", label: "KAA / DKAP / Pusat Asasi (PASP)", short: "KAA & DKAP", map: "Kompleks Akademik A (KAA) UPM" },
+      { group: "📍 Fakulti & Kampus", key: "kab", label: "KAB (Kompleks Akademik B)", short: "KAB", map: "Kompleks Akademik B (KAB) UPM" },
+      { group: "📍 Fakulti & Kampus", key: "fakulti_sains", label: "Fakulti Sains (FS) & FBMK", short: "Fakulti Sains", map: "Fakulti Sains UPM" },
+      { group: "📍 Fakulti & Kampus", key: "fakulti_eng", label: "Fakulti Kejuruteraan (FK)", short: "Fakulti Kejuruteraan", map: "Fakulti Kejuruteraan UPM" },
+      { group: "📍 Fakulti & Kampus", key: "spe", label: "SPE / SBE (Ekonomi)", short: "SPE (Ekonomi)", map: "Sekolah Perniagaan dan Ekonomi UPM" },
+      { group: "📍 Fakulti & Kampus", key: "fakulti_pertanian", label: "Fakulti Pertanian (FP)", short: "Fakulti Pertanian", map: "Fakulti Pertanian UPM" },
+      { group: "📍 Fakulti & Kampus", key: "fakulti_perhutanan", label: "Fakulti Perhutanan (FH / FPAS)", short: "Fakulti Perhutanan", map: "Fakulti Perhutanan dan Alam Sekitar UPM" },
+      { group: "📍 Fakulti & Kampus", key: "fsktm", label: "FSKTM (Komputer & IT)", short: "FSKTM", map: "Fakulti Sains Komputer dan Teknologi Maklumat UPM" },
+      { group: "📍 Fakulti & Kampus", key: "fstm", label: "FSTM (Sains Makanan)", short: "FSTM", map: "Fakulti Sains dan Teknologi Makanan UPM" },
+      { group: "📍 Fakulti & Kampus", key: "fem", label: "FEM (Ekologi Manusia)", short: "FEM", map: "Fakulti Ekologi Manusia UPM" },
+      { group: "📍 Fakulti & Kampus", key: "frsb", label: "FRSB (Rekabentuk & Senibina)", short: "FRSB", map: "Fakulti Rekabentuk dan Senibina UPM" },
+      { group: "📍 Fakulti & Kampus", key: "fpp", label: "FPP (Pendidikan)", short: "FPP", map: "Fakulti Pengajian Pendidikan UPM" },
+      { group: "📍 Fakulti & Kampus", key: "fbsb", label: "FBSB (Bioteknologi)", short: "FBSB", map: "Fakulti Bioteknologi dan Sains Biomolekul UPM" },
+      { group: "📍 Fakulti & Kampus", key: "pfc", label: "Putra Food Court (PFC)", short: "PFC", map: "Putra Food Court UPM" },
+      { group: "📍 Fakulti & Kampus", key: "psas", label: "Perpustakaan PSAS", short: "PSAS", map: "Perpustakaan Sultan Abdul Samad UPM" },
+      { group: "📍 Fakulti & Kampus", key: "dewan_besar", label: "Dewan Besar PKKSSAAS / Astaka Seni", short: "Dewan Besar", map: "Dewan Besar PKKSSAAS UPM" },
+      { group: "📍 Fakulti & Kampus", key: "pku", label: "Pusat Kesihatan Universiti (PKU)", short: "PKU", map: "Pusat Kesihatan Universiti (PKU) UPM" },
+      { group: "📍 Fakulti & Kampus", key: "masjid_upm", label: "Pusat Islam / Masjid UPM", short: "Masjid UPM", map: "Pusat Islam Universiti (Masjid UPM)" },
+      { group: "📍 Fakulti & Kampus", key: "stadium_upm", label: "Stadium UPM / Pusat Sukan", short: "Stadium UPM", map: "Stadium UPM Serdang" },
+      { group: "📍 Fakulti & Kampus", key: "pusat_komersial", label: "Pusat Komersial (Gigi Coffee / Bank)", short: "Pusat Komersial", map: "Pusat Komersial UPM" },
+      { group: "📍 Fakulti & Kampus", key: "bukit_ekspo", label: "Bukit Ekspo / Farm Fresh", short: "Bukit Ekspo", map: "Bukit Ekspo UPM" },
+
+      { group: "🏥 Hospital", key: "hsaas", label: "Hospital UPM (HSAAS / HPUPM)", short: "Hospital HSAAS", map: "Hospital Sultan Abdul Aziz Shah (HSAAS) UPM" },
+      { group: "🏥 Hospital", key: "hospital_serdang", label: "Hospital Serdang", short: "Hospital Serdang", map: "Hospital Sultan Idris Shah Serdang" },
+
+      { group: "🛍️ Mall & Kawasan Luar", key: "sri_serdang", label: "Sri Serdang (McD / Flat Ikan / Olive Hill)", short: "Sri Serdang", map: "Taman Sri Serdang, Seri Kembangan" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "ioi_city_mall", label: "IOI City Mall Putrajaya", short: "IOI City Mall", map: "IOI City Mall Putrajaya" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "de_centrum", label: "De Centrum Mall", short: "De Centrum", map: "De Centrum Mall, Kajang" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "uniten", label: "UNITEN", short: "UNITEN", map: "Universiti Tenaga Nasional (UNITEN)" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "the_mines", label: "The Mines Shopping Mall", short: "The Mines", map: "The Mines Shopping Mall, Seri Kembangan" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "south_city", label: "South City Plaza", short: "South City", map: "South City Plaza, Seri Kembangan" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "conezion", label: "IOI Conezion Putrajaya", short: "IOI Conezion", map: "Conezion Putrajaya" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "taman_equine", label: "Taman Equine / AEON", short: "Taman Equine", map: "AEON Mall Taman Equine" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "alamanda", label: "Alamanda Putrajaya", short: "Alamanda", map: "Alamanda Shopping Centre Putrajaya" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "bangi", label: "Bandar Baru Bangi / UKM", short: "Bangi", map: "Bandar Baru Bangi" },
+      { group: "🛍️ Mall & Kawasan Luar", key: "kajang", label: "Bandar Kajang", short: "Kajang", map: "Bandar Kajang" }
+    ];
+
+    const locationNames = {};
+    const googleMapsQueries = {};
+    locationCatalog.forEach(item => {
+      locationNames[item.key] = item.short;
+      googleMapsQueries[item.key] = item.map;
+    });
+    locationNames.k17 = "KTMB / K17";
+    locationNames.ktmb = "KTMB / K17";
+    googleMapsQueries.k17 = googleMapsQueries.kmb;
+    googleMapsQueries.ktmb = googleMapsQueries.kmb;
+
+    function populateLocationSelect(selectId, defaultVal, filterText) {
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
+      const currentVal = sel.value || defaultVal;
+      const q = (filterText || '').trim().toLowerCase();
+      sel.innerHTML = '';
+
+      const groups = {};
+      locationCatalog.forEach(item => {
+        if (q && !item.label.toLowerCase().includes(q) && !item.short.toLowerCase().includes(q) && !item.key.toLowerCase().includes(q)) {
+          return;
+        }
+        if (!groups[item.group]) groups[item.group] = [];
+        groups[item.group].push(item);
+      });
+
+      Object.keys(groups).forEach(groupLabel => {
+        const og = document.createElement('optgroup');
+        og.label = groupLabel;
+        groups[groupLabel].forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.key;
+          opt.textContent = item.label;
+          og.appendChild(opt);
+        });
+        sel.appendChild(og);
+      });
+
+      if (sel.querySelector(`option[value="${currentVal}"]`)) {
+        sel.value = currentVal;
+      } else if (sel.options.length > 0) {
+        sel.selectedIndex = 0;
+      }
+    }
+
+    function filterLocationSelect(side) {
+      const inputId = side === 'pickup' ? 'pickupFilterInput' : 'dropoffFilterInput';
+      const selectId = side === 'pickup' ? 'pickupSelect' : 'dropoffSelect';
+      const filterVal = document.getElementById(inputId)?.value || '';
+      populateLocationSelect(selectId, side === 'pickup' ? 'k12_serumpun' : 'mrt_upm', filterVal);
+      if (cockpitMode === 'quote') calculateFare();
+    }
+
+    function quickPickSide(side, key) {
+      const filterEl = document.getElementById(side === 'pickup' ? 'pickupFilterInput' : 'dropoffFilterInput');
+      if (filterEl && filterEl.value) {
+        filterEl.value = '';
+        populateLocationSelect(side === 'pickup' ? 'pickupSelect' : 'dropoffSelect', key, '');
+      }
+      const sel = document.getElementById(side === 'pickup' ? 'pickupSelect' : 'dropoffSelect');
+      if (sel) sel.value = key;
+      calculateFare();
+    }
+
+    // =============================================================
+    // 5. RADAR & PEAK HOUR DETECTOR
+    // =============================================================
+    let isManualPeakOverride = false;
+    let cockpitMode = 'snipe'; // 'snipe' | 'quote'
+    let activeTrip = null;
+    const addons = { extraStop: false, lateNight: false };
+    let currentTrafficLevel = 'sederhana';
+
+    function checkIsPeakHourTime() {
+      const now = new Date();
+      const mins = now.getHours() * 60 + now.getMinutes();
+      return (mins >= 420 && mins <= 570) || (mins >= 990 && mins <= 1200);
+    }
+
+    function initPeakHour() {
+      if (!isManualPeakOverride) {
+        const t = document.getElementById('peakHourToggle');
+        if (t) t.checked = checkIsPeakHourTime();
+      }
+    }
+
+    function manualTogglePeak() {
+      isManualPeakOverride = true;
+      const tag = document.getElementById('autoPeakTag');
+      if (tag) tag.textContent = "Manual Override";
+      if (cockpitMode === 'quote') calculateFare();
+      else if (document.getElementById('rawLeadInput')?.value.trim()) parseRawLead();
+      updateStagingRadar();
+    }
+
+    function updateStagingRadar() {
+      const now = new Date();
+      const mins = now.getHours() * 60 + now.getMinutes();
+      const day = now.getDay();
+
+      const clockEl = document.getElementById('currentClockText');
+      if (clockEl) clockEl.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const badge = document.getElementById('radarPeakBadge');
+      const isPeak = checkIsPeakHourTime();
+      if (badge) {
+        badge.textContent = isPeak ? "⚡ PEAK" : "NORMAL";
+        badge.className = isPeak ? "badge badge-peak" : "badge badge-normal";
+      }
+
+      const titleEl = document.getElementById('hotspotTitle');
+      if (!titleEl) return;
+      if (mins >= 420 && mins <= 570) {
+        titleEl.textContent = "Standby: Bus Stop Serumpun / KTDI Bukit";
+      } else if (mins >= 705 && mins <= 855) {
+        titleEl.textContent = "Standby: KAA / Fakulti Sains / FBMK";
+      } else if (mins >= 990 && mins <= 1230) {
+        titleEl.textContent = (day === 5 || day === 6 || day === 0)
+          ? "Standby: Serumpun (K12/K14) & MRT UPM"
+          : "Standby: Fakulti / Serumpun / K10";
+      } else if (mins > 1230) {
+        titleEl.textContent = "Standby: Stesen MRT UPM / Sri Serdang";
+      } else {
+        titleEl.textContent = "Standby: Serumpun / Central UPM";
+      }
+    }
+
+    // =============================================================
+    // 6. WORD-BOUNDARY SAFE LOCATION NORMALIZER (ZERO FALSE HITS)
+    // =============================================================
+    function cleanLocationInput(text) {
+      if (!text || text === '?') return "unknown";
+      let s = String(text).toLowerCase().trim()
+        .replace(/^[：:\-\s‘\'\"]+/, '')
+        .replace(/[‘\'\"]+$/, '');
+
+      const hasWord = (pattern) => new RegExp(`\\b(?:${pattern})\\b`, 'i').test(s);
+
+      // 1. Hospitals & KMB/K17 (Checked before generic KTM/Serdang)
+      if (s.includes('hospital serdang') || s.includes('hosp serdang') || s.includes('wad serdang') || s.includes('emergency serdang')) return 'hospital_serdang';
+      if (s.includes('mustaffa') || s.includes('babjee') || s.includes('kolej 17') || s.includes('kolej medic') || s.includes('fakulti perubatan') || s.includes('veterinar') || hasWord('ktmb|kmb|k17|medic|fpsk|vet|fpv|uvh')) return 'kmb';
+      if (s.includes('hospital upm') || s.includes('hospital pengajar') || hasWord('hsaas|hsass|hpupm')) return 'hsaas';
+
+      // 2. Transit & Airport
+      if (s.includes('mrt upm') || s.includes('stesen mrt upm') || (hasWord('mrt') && !s.includes('jaya') && !s.includes('equine') && !s.includes('kajang') && !s.includes('putrajaya'))) return 'mrt_upm';
+      if (s.includes('serdang jaya')) return 'mrt_serdang_jaya';
+      if (s.includes('mrt equine') || s.includes('equine') || hasWord('aeon')) return 'taman_equine';
+      if ((hasWord('ktm') || s.includes('stesen ktm') || s.includes('ktm serdang')) && !s.includes('ktmb')) return 'ktm_serdang';
+      if (s.includes('bandar tasik selatan') || s.includes('terminal bersepadu') || hasWord('tbs')) return 'tbs';
+      if (s.includes('putrajaya sentral') || s.includes('erl putrajaya')) return 'putrajaya_sentral';
+      if (hasWord('klia|klia1|klia2')) return 'klia';
+
+      // 3. Colleges
+      if (s.includes('serumpun') || s.includes('kolej 12') || s.includes('kolej 14') || s.includes('kolej 15') || s.includes('kolej 16') || s.includes('umai') || s.includes('tanjong') || s.includes('kenanga') || s.includes('blok melati') || /\bk(?:12|14|15|16)(?:[pl][1-6])?\b/i.test(s) || hasWord('pks|[pl][1-6]')) return 'k12_serumpun';
+      if (s.includes('ismail') || s.includes('lembah') || s.includes('bukit ktdi') || s.includes('merak') || hasWord('ktdi')) return 'ktdi';
+      if (s.includes('pendeta') || s.includes('zaba') || s.includes("za'ba") || s.includes('zaaba') || hasWord('kpz')) return 'kpz';
+      if (s.includes('kolej 10') || s.includes('sepuluh') || s.includes('blok mawar') || s.includes('blok melur') || hasWord('k10')) return 'k10';
+      if (s.includes('kolej 11') || s.includes('sebelas') || hasWord('k11')) return 'k11';
+      if (s.includes('kolej canselor') || s.includes('canselor') || hasWord('kc')) return 'kc';
+      if (s.includes('alaeddin') || s.includes('suleiman') || s.includes('dewan jauhari') || hasWord('kosass|kossas|kosas')) return 'kosass';
+      if (s.includes('kolej 13') || s.includes('aishah ghani') || hasWord('ktag|k13')) return 'ktag';
+      if (s.includes('mohamad rashid') || s.includes('rashid') || hasWord('kmr')) return 'kmr';
+
+      // 4. Faculties & Academic Buildings (All short codes strictly word-bounded!)
+      if (s.includes('akademik a') || s.includes('kuliah pusat') || s.includes('pusat asasi') || s.includes('kompleks akademik e') || s.includes('dewan kuliah') || hasWord('kaa|dkap|asasi|pasp|kae|dk2')) return 'kaa';
+      if (s.includes('akademik b') || hasWord('kab')) return 'kab';
+      if (s.includes('fizik') || s.includes('kimia') || s.includes('matematik') || s.includes('biologi') || s.includes('bahasa moden') || s.includes('komunikasi') || s.includes('music department') || hasWord('sains|fs|fbmk|calc')) return 'fakulti_sains';
+      if (s.includes('kejuruteraan') || s.includes('engineering') || hasWord('eng|fk')) return 'fakulti_eng';
+      if (s.includes('ekonomi') || s.includes('perniagaan') || hasWord('spe|sbe|fep|cem')) return 'spe';
+      if (s.includes('pertanian') || hasWord('fp|agri')) return 'fakulti_pertanian';
+      if (s.includes('perhutanan') || s.includes('alam sekitar') || s.includes('forestry') || hasWord('fh|fpas')) return 'fakulti_perhutanan';
+      if (s.includes('komputer') || s.includes('it upm') || s.includes('computer science') || hasWord('fsktm|cs')) return 'fsktm';
+      if (s.includes('food tech') || s.includes('foodtech') || s.includes('sains makanan') || hasWord('fstm')) return 'fstm';
+      if (s.includes('ekologi') || hasWord('fem')) return 'fem';
+      if (s.includes('senibina') || s.includes('arkitek') || hasWord('frsb|design')) return 'frsb';
+      if (s.includes('pendidikan') || s.includes('education') || hasWord('fpp')) return 'fpp';
+      if (s.includes('biotech') || s.includes('bioteknologi') || hasWord('fbsb')) return 'fbsb';
+
+      // 5. Campus Facilities
+      if (s.includes('food court') || s.includes('putra food') || hasWord('pfc')) return 'pfc';
+      if (s.includes('library') || s.includes('perpustakaan') || hasWord('psas')) return 'psas';
+      if (s.includes('dewan besar') || s.includes('dewan canselor') || s.includes('dewan warisan') || s.includes('panggung percubaan') || s.includes('astaka seni') || s.includes('dewan persidangan') || hasWord('dctar|pkkssaas')) return 'dewan_besar';
+      if (s.includes('klinik upm') || s.includes('pusat kesihatan') || hasWord('pku')) return 'pku';
+      if (s.includes('masjid upm') || s.includes('pusat islam') || hasWord('masjid')) return 'masjid_upm';
+      if (s.includes('stadium') || s.includes('pusat sukan') || s.includes('gimnasium') || s.includes('kolam renang') || s.includes('pusat koko') || s.includes('gelanggang') || hasWord('pkpp')) return 'stadium_upm';
+      if (s.includes('pusat komersial') || s.includes('bank islam') || s.includes('pos upm') || s.includes('gigi coffee') || s.includes('mynews') || s.includes('emart') || s.includes('he&she')) return 'pusat_komersial';
+      if (s.includes('bukit ekspo') || s.includes('ekspo')) return 'bukit_ekspo';
+      if (s.includes('farm fresh') || s.includes('ladang 16') || s.includes('ladang 10') || s.includes('myageing') || hasWord('tpu')) return 'k10';
+
+      // 6. Food & Outer Towns
+      if (s.includes('sri serdang') || s.includes('seri serdang') || s.includes('flat ikan') || s.includes('mcd sri serdang') || s.includes('pasar malam') || s.includes('dobi mammy') || s.includes('dobi mamme') || s.includes('ayam gepuk') || s.includes('mixue') || s.includes('laundrybar') || s.includes('mutiara residence') || s.includes('univ 360') || s.includes('olive hill') || hasWord('tss|ss')) return 'sri_serdang';
+      if (s.includes('moxy') || s.includes('le meridien') || hasWord('ioi')) return 'ioi_city_mall';
+      if (s.includes('de centrum') || s.includes('decentrum') || hasWord('iukl')) return 'de_centrum';
+      if (hasWord('uniten')) return 'uniten';
+      if (s.includes('conezion')) return 'conezion';
+      if (s.includes('mines')) return 'the_mines';
+      if (s.includes('south city') || s.includes('academia') || s.includes('serdang perdana')) return 'south_city';
+      if (s.includes('alamanda')) return 'alamanda';
+      if (s.includes('bangi') || hasWord('ukm')) return 'bangi';
+      if (s.includes('kajang')) return 'kajang';
+
+      return 'unknown';
+    }
+
+    // =============================================================
+    // 7. FARE BENCHMARK & OFF-CAMPUS CALCULATOR
+    // =============================================================
+    const offListDestinations = [
+      { regex: /\b(de\s*centrum|decentrum|uniten|iukl)\b/i, name: "De Centrum / UNITEN", km: 5, mins: 10 },
+      { regex: /\b(conezion)\b/i, name: "IOI Conezion", km: 6, mins: 12 },
+      { regex: /\b(south\s*city|serdang\s*perdana|one\s*south|academia)\b/i, name: "South City Plaza", km: 6, mins: 12 },
+      { regex: /\b(mrt\s*serdang\s*jaya|serdang\s*jaya)\b/i, name: "MRT Serdang Jaya", km: 6, mins: 12 },
+      { regex: /\b(hospital\s*serdang)\b/i, name: "Hospital Serdang", km: 5, mins: 10 },
+      { regex: /\b(equine|aeon\s*equine|pasar\s*borong)\b/i, name: "Taman Equine / AEON", km: 8, mins: 15 },
+      { regex: /\b(balakong|c180|cheras\s*traders|amerin)\b/i, name: "Balakong / C180", km: 11, mins: 18 },
+      { regex: /\b(alamanda)\b/i, name: "Alamanda Putrajaya", km: 11, mins: 16 },
+      { regex: /\b(bangi\s*gateway|evo\s*mall|pkns\s*bangi|seksyen\s*\d+\s*bangi|bangi)\b/i, name: "Bandar Baru Bangi", km: 13, mins: 18 },
+      { regex: /\b(ukm|universiti\s*kebangsaan)\b/i, name: "UKM Bangi", km: 15, mins: 20 },
+      { regex: /\b(kajang|metro\s*point|mrt\s*kajang|hospital\s*kajang)\b/i, name: "Bandar Kajang", km: 14, mins: 20 },
+      { regex: /\b(presint|picc|putrajaya|hospital\s*putrajaya)\b/i, name: "Putrajaya Presint", km: 14, mins: 20 },
+      { regex: /\b(cyberjaya|d'?pulze|shaftsbury|mmu|tamarind)\b/i, name: "Cyberjaya", km: 17, mins: 22 },
+      { regex: /\b(bukit\s*jalil|pavilion\s*bukit\s*jalil|stadium\s*bukit\s*jalil|tpm|apu)\b/i, name: "Bukit Jalil / APU", km: 16, mins: 20 },
+      { regex: /\b(sungai\s*besi|sri\s*petaling)\b/i, name: "Sungai Besi / Sri Petaling", km: 15, mins: 20 },
+      { regex: /\b(puchong|ioi\s*mall\s*puchong|bandar\s*puteri)\b/i, name: "Puchong", km: 18, mins: 25 },
+      { regex: /\b(cheras|connaught|ekocheras|ucsi)\b/i, name: "Cheras KL", km: 19, mins: 25 },
+      { regex: /\b(mid\s*valley|kl\s*sentral|bangsar)\b/i, name: "Mid Valley / KL Sentral", km: 23, mins: 30 },
+      { regex: /\b(sunway\s*pyramid|subang\s*jaya|usj|taylor'?s|sunway\s*u)\b/i, name: "Sunway / Subang", km: 26, mins: 35 },
+      { regex: /\b(klcc|bukit\s*bintang|pavilion\s*kl|trx|kuala\s*lumpur)\b/i, name: "KL City Centre", km: 25, mins: 35 },
+      { regex: /\b(shah\s*alam|uitm|i-?city)\b/i, name: "Shah Alam", km: 33, mins: 40 },
+      { regex: /\b(nilai|usim)\b/i, name: "Nilai / USIM", km: 28, mins: 30 }
+    ];
+
+    function detectUnlistedTripInfo(originRaw, destRaw, pKey, dKey) {
+      const dynamicKeys = ['bangi', 'kajang', 'alamanda', 'taman_equine', 'de_centrum', 'uniten', 'conezion', 'south_city', 'mrt_serdang_jaya', 'hospital_serdang'];
+      const isUnlisted = pKey === 'unknown' || dKey === 'unknown' || dynamicKeys.includes(pKey) || dynamicKeys.includes(dKey);
+      if (!isUnlisted) return { isUnlisted: false };
+
+      const combinedText = `${originRaw || ''} ${destRaw || ''}`.toLowerCase();
+      for (const item of offListDestinations) {
+        if (item.regex.test(combinedText)) {
+          return { isUnlisted: true, name: item.name, km: item.km, mins: item.mins };
+        }
+      }
+      return { isUnlisted: true, name: "Luar Senarai", km: 10, mins: 16 };
+    }
+
+    function calculateDynamicUnlistedFare(km, mins, trafficLevel, isPeak) {
+      const baseFare = 5.0;
+      let distCost = km <= 5 ? km * 1.0
+        : km <= 15 ? 5.0 + (km - 5) * 0.90
+        : km <= 30 ? 14.0 + (km - 15) * 0.85
+        : 26.75 + (km - 30) * 0.80;
+      const deadhead = km >= 35 ? 8.0 : (km >= 20 ? 4.0 : 0);
+      const expectedMins = Math.max(6, km * 1.3);
+      const jamCost = mins > expectedMins ? Math.min(8.0, (mins - expectedMins) * 0.25) : 0;
+      const trafficCost = trafficLevel === 'sesak' ? (km >= 10 ? 4.0 : 2.0) : (trafficLevel === 'sederhana' && isPeak ? 2.0 : 0);
+      const peakCost = isPeak ? (km >= 12 ? 5.0 : (km >= 5 ? 3.0 : 1.0)) : 0;
+      return Math.max(6, Math.round(baseFare + distCost + deadhead + jamCost + trafficCost + peakCost));
+    }
+
+    function computeFareForPair(pickup, dropoff, rawFrom, rawTo) {
+      const isPeak = document.getElementById('peakHourToggle')?.checked || false;
+      const pair = [pickup, dropoff];
+
+      if (pickup === dropoff && pickup !== 'unknown') return 0;
+      if (pair.includes('klia')) return 60;
+      if (pair.includes('tbs')) return isPeak ? 25 : 20;
+      if (pair.includes('putrajaya_sentral')) return isPeak ? 25 : 20;
+      if (pair.includes('ktm_serdang')) return isPeak ? 12 : 10;
+      if (pair.includes('the_mines')) return 12;
+
+      if (pair.includes('ioi_city_mall')) {
+        if (pair.includes('kmb') || pair.includes('hsaas')) return isPeak ? 7 : 5;
+        return isPeak ? 15 : 10;
+      }
+
+      if (pair.includes('mrt_upm')) {
+        if (pair.includes('k10')) return 6;
+        if (pair.includes('kc') || pair.includes('kosass') || pair.includes('kpz') || pair.includes('ktdi') || pair.includes('k11') || pair.includes('kmr') || pair.includes('ktag')) return 7;
+        if (pair.includes('k12_serumpun')) return 8;
+        if (pair.includes('kmb') || pair.includes('hsaas')) return 10;
+        return 6;
+      }
+
+      if (pair.includes('sri_serdang')) {
+        if (pair.includes('k10')) return 5;
+        return 7;
+      }
+
+      if (pair.includes('hospital_serdang')) {
+        if (pair.includes('kmb') || pair.includes('hsaas')) return 5;
+        return 8;
+      }
+
+      if (pair.includes('de_centrum') || pair.includes('uniten')) return 8;
+      if (pair.includes('south_city') || pair.includes('conezion') || pair.includes('mrt_serdang_jaya')) return 10;
+      if (pair.includes('taman_equine')) return isPeak ? 15 : 12;
+      if (pair.includes('kmb') || pair.includes('hsaas')) return 7;
+
+      if (pickup === 'unknown' || dropoff === 'unknown' || ['bangi', 'kajang', 'alamanda'].includes(pickup) || ['bangi', 'kajang', 'alamanda'].includes(dropoff)) {
+        const info = detectUnlistedTripInfo(rawFrom, rawTo, pickup, dropoff);
+        if (info.isUnlisted) return calculateDynamicUnlistedFare(info.km, info.mins, currentTrafficLevel, isPeak);
+      }
+      return 6;
+    }
+
+    // =============================================================
+    // 8. SNIPE LEAD PARSER + RECENT SNIPE DUPLICATE TRACKER
+    // =============================================================
+    function extractContactInfo(text) {
+      if (!text) return { phone: "", contactUrl: "", isDirectLink: false };
+
+      const qrMatch = text.match(/(?:https?:\/\/)?(?:www\.)?wa\.me\/qr\/([a-zA-Z0-9_\-]+)/i);
+      if (qrMatch) return { phone: "", contactUrl: `https://wa.me/qr/${qrMatch[1]}`, isDirectLink: true };
+
+      const linkMatch = text.match(/(?:https?:\/\/)?(?:www\.)?wa\.link\/([a-zA-Z0-9_\-]+)/i);
+      if (linkMatch) return { phone: "", contactUrl: `https://wa.link/${linkMatch[1]}`, isDirectLink: true };
+
+      const waDigit = text.match(/(?:wa\.me\/|wasap\.my\/)(?:\+?60|0)?(\d{8,11})/i);
+      if (waDigit) {
+        const clean = normalizeMalaysianPhone(waDigit[1]);
+        return { phone: clean, contactUrl: `https://wa.me/${clean}`, isDirectLink: false };
+      }
+
+      const m = text.match(/(?:^|[^\d])(\+?601[\d\s\-]{7,13}\d|01[\d\s\-]{7,13}\d)(?:[^\d]|$)/);
+      if (m) {
+        const clean = normalizeMalaysianPhone(m[1]);
+        if (clean.length >= 11 && clean.length <= 12) {
+          return { phone: clean, contactUrl: `https://wa.me/${clean}`, isDirectLink: false };
+        }
+      }
+      return { phone: "", contactUrl: "", isDirectLink: false };
+    }
+
+    function computeLeadKey(trip) {
+      if (!trip) return '';
+      if (trip.phone) return `p:${trip.phone}`;
+      if (trip.contactUrl) return `u:${trip.contactUrl}`;
+      return `r:${(trip.originName || '').toLowerCase()}->${(trip.destName || '').toLowerCase()}`;
+    }
+
+    function getSnipedHistory() {
+      try {
+        const list = JSON.parse(localStorage.getItem('upm_cab_sniped_history') || '[]');
+        const cutoff = Date.now() - 30 * 60 * 1000; // 30 minutes
+        return Array.isArray(list) ? list.filter(item => item.ts > cutoff) : [];
+      } catch (e) { return []; }
+    }
+
+    function markLeadReplied(trip) {
+      const key = computeLeadKey(trip);
+      if (!key) return;
+      const list = getSnipedHistory().filter(item => item.key !== key);
+      list.unshift({ key, ts: Date.now() });
+      try { localStorage.setItem('upm_cab_sniped_history', JSON.stringify(list.slice(0, 30))); } catch (e) {}
+    }
+
+    function getLeadRepliedMinutesAgo(trip) {
+      const key = computeLeadKey(trip);
+      if (!key) return null;
+      const hit = getSnipedHistory().find(item => item.key === key);
+      if (!hit) return null;
+      return Math.max(0, Math.round((Date.now() - hit.ts) / 60000));
+    }
+
+    const sampleLeadsList = [
+      "Hi driver, available tak?\nFrom: Bus stop serumpun\nTo: MRT UPM\nTime: now\nPax: 1\nwa.me/60115501891",
+      "From: K10\nTo: Sri Serdang (McD)\nTime: now\nPack: 2\n017-4651423",
+      "KTDI Bukit ke KAA sekarang 1 pax 0194141042",
+      "From: Kolej 17 (KMB)\nTo: IOI City Mall West Entrance\nTime: now\nPax: 5\n0136750203"
+    ];
+    let sampleLeadIdx = 0;
+
+    function loadSampleLead() {
+      const input = document.getElementById('rawLeadInput');
+      if (!input) return;
+      input.value = sampleLeadsList[sampleLeadIdx % sampleLeadsList.length];
+      sampleLeadIdx++;
+      setCockpitMode('snipe');
+      parseRawLead();
+      showToast("Contoh mesej dimuatkan!");
+    }
+
+    function clearLeadInput() {
+      const input = document.getElementById('rawLeadInput');
+      if (input) input.value = '';
+      if (cockpitMode === 'snipe') {
+        activeTrip = null;
+        renderActiveCockpit();
+      }
+    }
+
+    function getPreciseMapQuery(rawText, key) {
+      let text = (rawText || '').trim().replace(/^(?:from|to|pickup|dropoff|destinasi|dari|ke)[:\-\s]+/i, '').trim();
+      if ((!text || text === '?') && key && googleMapsQueries[key]) return googleMapsQueries[key];
+
+      if (/\b(ktmb|kmb|k17|mustaffa\s*babjee)\b/i.test(text)) {
+        const detail = text.replace(/\b(ktmb|kmb|k17|kolej\s*17|mustaffa\s*babjee|kolej)\b/gi, '').replace(/^[,\-\s]+|[,\-\s]+$/g, '');
+        return detail ? `Kolej Tan Sri Mustaffa Babjee (K17) ${detail}, UPM` : "Kolej Tan Sri Mustaffa Babjee (K17) UPM";
+      }
+      if (/\bserumpun\b/i.test(text) || (key === 'k12_serumpun' && /\b[pPlL][1-6]\b/i.test(text))) {
+        const mBlock = text.match(/\b([pPlL][1-6])\b/i);
+        return mBlock ? `Kolej Serumpun Blok ${mBlock[1].toUpperCase()}, UPM` : "Kolej Serumpun UPM";
+      }
+      if (/panggung\s*percubaan/i.test(text)) return "Panggung Percubaan UPM, Dewan Besar PKKSSAAS UPM";
+      if (/astaka\s*seni/i.test(text)) return "Astaka Seni UPM, Dewan Besar PKKSSAAS UPM";
+      if (/\b(sbe|spe)\b/i.test(text)) return "Sekolah Perniagaan dan Ekonomi (SPE) UPM";
+      if (/pusat\s*asasi|pasp/i.test(text)) return "Pusat Asasi Sains Pertanian (PASP) UPM";
+      if (/olive\s*hill/i.test(text)) return "Olive Hill Business Park, Seri Kembangan";
+      if (/farm\s*fresh/i.test(text)) return "Farm Fresh @ UPM Ladang 16";
+
+      if (key && googleMapsQueries[key] && (text.length <= 5 || text.toLowerCase().replace(/\s+/g, '') === key)) {
+        return googleMapsQueries[key];
+      }
+      if (/\bmrt\s*upm\b/i.test(text)) return "Stesen MRT UPM (Pintu A)";
+      if (/\bktm\b/i.test(text) && !/\bktmb\b/i.test(text)) return "Stesen KTM Serdang";
+      if (/(?:upm|serdang|putrajaya|kajang|bangi|kembangan|klia|cheras|kuala lumpur|selangor)/i.test(text)) return text;
+      return text && text !== '?' ? `${text}, UPM Serdang` : "Universiti Putra Malaysia (UPM)";
+    }
+
+    function parseRawLead() {
+      const raw = document.getElementById('rawLeadInput')?.value || '';
+      if (!raw || raw.trim().length < 4) {
+        if (cockpitMode === 'snipe') {
+          activeTrip = null;
+          renderActiveCockpit();
+        }
+        return;
+      }
+
+      const fromMatch = raw.match(/(?:\bfrom\b|\bdari\b|\bpickup\b)\s*[:\-：]?\s*([^\n\r]+)/i);
+      const toMatch = raw.match(/(?:\bto\b|\bke\b|\bdropoff\b|\bdestinasi\b)\s*[:\-：]?\s*([^\n\r]+)/i);
+      const paxMatch = raw.match(/(?:\bpack\b|\bpax\b|\borang\b|\bseat\b)\s*[:\-：]?\s*(\d+)/i) || raw.match(/\b(\d+)\s*(?:pax|orang)\b/i);
+      const timeMatch = raw.match(/(?:\btime\b|\bmasa\b|\bjam\b)\s*[:\-：]?\s*([^\n\r]+)/i);
+      const contactInfo = extractContactInfo(raw);
+
+      let originRaw = fromMatch ? fromMatch[1].trim() : "";
+      let destRaw = toMatch ? toMatch[1].trim() : "";
+
+      // Casual Malay fallback ("Serumpun ke MRT UPM", "dr k10 gi ioi", "K10 -> Sri Serdang")
+      if (!originRaw && !destRaw) {
+        const inlineArrow = raw.match(/([^\n\r,:]{2,35}?)\s*(?:➔|->|-->|\bke\b|\bto\b|\bgi\b)\s*([^\n\r,!?]{2,35})/i);
+        if (inlineArrow) {
+          originRaw = inlineArrow[1].replace(/^(?:hi|hello|driver|anyone|available|nak|nk|dari|dr|from)\s+/i, '').trim();
+          destRaw = inlineArrow[2].replace(/\s+(?:now|sekarang|skrg|\d+\s*(?:pax|orang)|01\d+|wa\.me.*).*$/i, '').trim();
+        }
+      }
+
+      originRaw = originRaw.replace(/^[：:\-\s‘\'\"]+/, '').replace(/[‘\'\"]+$/, '').trim();
+      destRaw = destRaw.replace(/^[：:\-\s‘\'\"]+/, '').replace(/[‘\'\"]+$/, '').trim();
+
+      const originMissing = !originRaw;
+      const destMissing = !destRaw;
+
+      const pax = paxMatch ? parseInt(paxMatch[1], 10) : 1;
+      const timeStr = timeMatch ? timeMatch[1].replace(/^[：:\-\s]+/, '').trim() : "now";
+
+      const pKey = originMissing ? 'unknown' : cleanLocationInput(originRaw);
+      const dKey = destMissing ? 'unknown' : cleanLocationInput(destRaw);
+
+      const fare = (originMissing || destMissing) ? 6 : computeFareForPair(pKey, dKey, originRaw, destRaw);
+      const unlisted = detectUnlistedTripInfo(originRaw, destRaw, pKey, dKey);
+      if (unlisted.isUnlisted) {
+        const kmEl = document.getElementById('customKmInput');
+        const minEl = document.getElementById('customMinInput');
+        if (kmEl) kmEl.value = unlisted.km;
+        if (minEl) minEl.value = unlisted.mins;
+      }
+
+      activeTrip = {
+        mode: 'snipe',
+        pKey,
+        dKey,
+        originName: originRaw || '?',
+        destName: destRaw || '?',
+        originMissing,
+        destMissing,
+        pax,
+        timeStr,
+        phone: contactInfo.phone,
+        contactUrl: contactInfo.contactUrl,
+        isDirectLink: contactInfo.isDirectLink,
+        fare,
+        logged: false,
+        pickupQuery: getPreciseMapQuery(originRaw, pKey),
+        dropoffQuery: getPreciseMapQuery(destRaw, dKey)
+      };
+
+      renderActiveCockpit();
+    }
+
+    function fixAmbiguousLocation(key, shortLabel) {
+      if (!activeTrip) return;
+      if (activeTrip.originMissing || activeTrip.pKey === 'unknown') {
+        activeTrip.pKey = key;
+        activeTrip.originName = shortLabel;
+        activeTrip.originMissing = false;
+      } else {
+        activeTrip.dKey = key;
+        activeTrip.destName = shortLabel;
+        activeTrip.destMissing = false;
+      }
+      activeTrip.fare = (activeTrip.originMissing || activeTrip.destMissing)
+        ? activeTrip.fare
+        : computeFareForPair(activeTrip.pKey, activeTrip.dKey, activeTrip.originName, activeTrip.destName);
+      activeTrip.pickupQuery = getPreciseMapQuery(activeTrip.originName, activeTrip.pKey);
+      activeTrip.dropoffQuery = getPreciseMapQuery(activeTrip.destName, activeTrip.dKey);
+      renderActiveCockpit();
+    }
+
+    async function pasteFromClipboard() {
+      setCockpitMode('snipe');
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text && text.trim()) {
+            const input = document.getElementById('rawLeadInput');
+            if (input) input.value = text;
+            parseRawLead();
+            showToast("Mesej ditampal & dianalisis!");
+            return;
+          }
+        }
+      } catch (err) {}
+      const input = document.getElementById('rawLeadInput');
+      if (input) {
+        input.focus();
+        input.select();
+        showToast("Tekan ruangan teks di atas & tap Paste.");
+      }
+    }
+
+    // =============================================================
+    // 9. UNIFIED QUOTER + ACTION COCKPIT RENDERING
+    // =============================================================
+    function setCockpitMode(mode) {
+      cockpitMode = mode === 'quote' ? 'quote' : 'snipe';
+      document.getElementById('modeSnipeBtn')?.classList.toggle('active', cockpitMode === 'snipe');
+      document.getElementById('modeQuoteBtn')?.classList.toggle('active', cockpitMode === 'quote');
+      document.getElementById('snipeInputPanel')?.classList.toggle('hidden', cockpitMode !== 'snipe');
+      document.getElementById('quoterInputPanel')?.classList.toggle('hidden', cockpitMode !== 'quote');
+
+      if (cockpitMode === 'quote') {
+        calculateFare();
+      } else {
+        const raw = document.getElementById('rawLeadInput')?.value || '';
+        if (raw.trim().length >= 4) parseRawLead();
+        else {
+          activeTrip = null;
+          renderActiveCockpit();
+        }
+      }
+    }
+
+    function swapLocations() {
+      const p = document.getElementById('pickupSelect');
+      const d = document.getElementById('dropoffSelect');
+      if (!p || !d) return;
+      const tmp = p.value;
+      p.value = d.value;
+      d.value = tmp;
+      calculateFare();
+    }
+
+    function setPreset(from, to) {
+      switchView('snipe');
+      document.getElementById('pickupFilterInput').value = '';
+      document.getElementById('dropoffFilterInput').value = '';
+      populateLocationSelect('pickupSelect', from, '');
+      populateLocationSelect('dropoffSelect', to, '');
+      document.getElementById('pickupSelect').value = from;
+      document.getElementById('dropoffSelect').value = to;
+      setCockpitMode('quote');
+    }
+
+    function toggleAddon(type) {
+      addons[type] = !addons[type];
+      document.getElementById(type === 'extraStop' ? 'extraStopBtn' : 'lateNightBtn')?.classList.toggle('active', addons[type]);
+      calculateFare();
+    }
+
+    function onQuoterPhoneInput() {
+      if (cockpitMode === 'quote' && activeTrip) {
+        const rawPhone = document.getElementById('quoterPhoneInput')?.value || '';
+        const info = extractContactInfo(rawPhone);
+        activeTrip.phone = info.phone || normalizeMalaysianPhone(rawPhone);
+        activeTrip.contactUrl = info.contactUrl;
+        renderActiveCockpit();
+      }
+    }
+
+    function calculateFare() {
+      const pickup = document.getElementById('pickupSelect')?.value || 'k12_serumpun';
+      const dropoff = document.getElementById('dropoffSelect')?.value || 'mrt_upm';
+      const rawPhone = document.getElementById('quoterPhoneInput')?.value || '';
+      const contact = extractContactInfo(rawPhone);
+      const phone = contact.phone || normalizeMalaysianPhone(rawPhone);
+
+      let total = 0;
+      if (pickup !== dropoff) {
+        total = computeFareForPair(pickup, dropoff, locationNames[pickup], locationNames[dropoff]);
+        if (addons.extraStop) total += 2;
+        if (addons.lateNight) total += 3;
+      }
+
+      activeTrip = {
+        mode: 'quote',
+        pKey: pickup,
+        dKey: dropoff,
+        originName: locationNames[pickup] || pickup,
+        destName: locationNames[dropoff] || dropoff,
+        originMissing: false,
+        destMissing: false,
+        pax: 1,
+        timeStr: 'sekarang',
+        phone,
+        contactUrl: contact.contactUrl,
+        isDirectLink: contact.isDirectLink,
+        fare: total,
+        logged: false,
+        pickupQuery: googleMapsQueries[pickup] || `${locationNames[pickup] || pickup}, UPM Serdang`,
+        dropoffQuery: googleMapsQueries[dropoff] || `${locationNames[dropoff] || dropoff}, UPM Serdang`
+      };
+      renderActiveCockpit();
+    }
+
+    function adjustActiveFare(delta) {
+      if (!activeTrip) return;
+      activeTrip.fare = Math.max(1, (parseInt(activeTrip.fare, 10) || 6) + delta);
+      renderActiveCockpit();
+    }
+
+    function setActiveFare(val) {
+      if (!activeTrip) return;
+      activeTrip.fare = val;
+      renderActiveCockpit();
+    }
+
+    function renderSmartFareChips(trip) {
+      const container = document.getElementById('smartFareChips');
+      if (!container || !trip) return;
+      const base = Math.max(5, trip.fare || 6);
+      const candidates = Array.from(new Set([base, 6, 7, 8, 10, 12, 15, 20])).slice(0, 4).sort((a, b) => a - b);
+      container.innerHTML = candidates.map(v =>
+        `<button type="button" class="chip ${v === trip.fare ? 'active-chip' : ''}" onclick="setActiveFare(${v})">RM${v}</button>`
+      ).join('');
+    }
+
+    function renderActiveCockpit() {
+      const cockpit = document.getElementById('actionCockpit');
+      const emptyHint = document.getElementById('emptySnipeHint');
+      if (!cockpit) return;
+
+      if (!activeTrip) {
+        cockpit.classList.add('hidden');
+        if (emptyHint) emptyHint.classList.toggle('hidden', cockpitMode !== 'snipe');
+        return;
+      }
+
+      cockpit.classList.remove('hidden');
+      if (emptyHint) emptyHint.classList.add('hidden');
+
+      const trip = activeTrip;
+      document.getElementById('activeRouteText').textContent = `${trip.originName} ➔ ${trip.destName}`;
+      document.getElementById('activeFareAmount').textContent = trip.fare;
+
+      // Pax warning (>4 passengers alert for regular sedan)
+      const paxEl = document.getElementById('activePaxBadge');
+      if (paxEl) {
+        if (trip.pax >= 5) {
+          paxEl.textContent = `⚠️ ${trip.pax} Pax (Max 4!)`;
+          paxEl.className = "badge badge-warn";
+        } else {
+          paxEl.textContent = `👥 ${trip.pax} Pax`;
+          paxEl.className = "badge badge-muted";
+        }
+      }
+
+      document.getElementById('activeTimeText').textContent = `⏰ ${trip.timeStr}`;
+      document.getElementById('activePhoneText').textContent = trip.phone
+        ? `+${trip.phone}`
+        : (trip.contactUrl ? '🔗 Link WA' : '💬 Telegram PM');
+
+      // Ambiguity check (only show if parser failed to detect either side)
+      const ambBox = document.getElementById('ambiguousFixBox');
+      const ambTitle = document.getElementById('ambiguousFixTitle');
+      if (ambBox) {
+        if (trip.originMissing || trip.destMissing) {
+          ambBox.classList.remove('hidden');
+          ambTitle.textContent = trip.originMissing
+            ? "❓ Lokasi AMBIL tak jelas — tap untuk pilih:"
+            : "❓ Lokasi HANTAR tak jelas — tap untuk pilih:";
+        } else {
+          ambBox.classList.add('hidden');
+        }
+      }
+
+      // Duplicate replied indicator
+      const dupEl = document.getElementById('repliedWarningBadge');
+      const minsAgo = getLeadRepliedMinutesAgo(trip);
+      if (dupEl) {
+        if (minsAgo !== null) {
+          dupEl.textContent = minsAgo === 0 ? "⚠️ Baru Reply" : `⚠️ Dah Reply (${minsAgo}m)`;
+          dupEl.classList.remove('hidden');
+        } else {
+          dupEl.classList.add('hidden');
+        }
+      }
+
+      // Log Trip button state
+      const logBtn = document.getElementById('logTripBtn');
+      const logTxt = document.getElementById('logTripBtnText');
+      if (logBtn && logTxt) {
+        logBtn.className = trip.logged ? "action-btn logged" : "action-btn log";
+        logTxt.textContent = trip.logged ? "Tercatat ✅" : "Catat Trip";
+      }
+
+      // Grab estimate / Smart Fare Chips
+      renderSmartFareChips(trip);
+      const grabEl = document.getElementById('grabSaveBadge');
+      if (grabEl) {
+        grabEl.textContent = trip.fare > 0 ? `Grab ~RM${Math.round(trip.fare * 1.45)}` : '';
+      }
+
+      // Live Offer Preview (Price ALWAYS at the very end)
+      const offerMsg = formatOfferText(trip.originName, trip.destName, trip.fare);
+      document.getElementById('activeOfferPreview').textContent = offerMsg;
+
+      // WhatsApp Primary CTA (Real <a> without target="_blank")
+      const waLink = document.getElementById('directWhatsAppLink');
+      const webFallback = document.getElementById('fallbackWaWebLink');
+      const waLabel = document.getElementById('waBtnLabel');
+      const waIcon = document.getElementById('waBtnIcon');
+
+      if (trip.phone) {
+        waLink.href = buildWhatsAppHref(trip.phone, offerMsg, '');
+        if (webFallback) webFallback.href = buildWhatsAppHref(trip.phone, offerMsg, '', 'web');
+        waLink.className = "wa-cta";
+        waIcon.textContent = "🟢";
+        waLabel.textContent = `Buka WhatsApp & Hantar (RM${trip.fare})`;
+      } else if (trip.contactUrl) {
+        waLink.href = trip.contactUrl;
+        if (webFallback) webFallback.href = trip.contactUrl;
+        waLink.className = "wa-cta warn-cta";
+        waIcon.textContent = "📋";
+        waLabel.textContent = `Offer Disalin! Buka Link & Paste (RM${trip.fare})`;
+      } else {
+        waLink.href = "#";
+        if (webFallback) webFallback.href = "#";
+        waLink.className = "wa-cta pm-cta";
+        waIcon.textContent = "💬";
+        waLabel.textContent = `Salin Offer Untuk PM Telegram (RM${trip.fare})`;
+      }
+
+      recalcCustomEstimatePreviewOnly();
+    }
+
+    function handlePrimaryWhatsAppClick(e) {
+      if (!activeTrip) {
+        if (e) e.preventDefault();
+        return;
+      }
+      const offerMsg = formatOfferText(activeTrip.originName, activeTrip.destName, activeTrip.fare);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(offerMsg).catch(() => {});
+      }
+
+      markLeadReplied(activeTrip);
+      setTimeout(renderActiveCockpit, 120);
+
+      if (!activeTrip.phone && !activeTrip.contactUrl) {
+        if (e) e.preventDefault();
+        showToast("Offer disalin! Paste di PM Telegram pelajar.");
+        return;
+      }
+      if (!activeTrip.phone && activeTrip.contactUrl) {
+        showToast("Offer disalin! Tekan Paste bila WhatsApp terbuka.");
+        return;
+      }
+      // Do NOT preventDefault on native <a> so iOS Safari switches immediately to WhatsApp!
+      showToast("Membuka WhatsApp...");
+    }
+
+    function handleFallbackWaWebClick(e) {
+      if (!activeTrip || (!activeTrip.phone && !activeTrip.contactUrl)) {
+        if (e) e.preventDefault();
+        copyActiveOffer();
+        return;
+      }
+      markLeadReplied(activeTrip);
+      showToast("Membuka pautan wa.me...");
+    }
+
+    function copyActiveOffer() {
+      if (!activeTrip) return;
+      const text = formatOfferText(activeTrip.originName, activeTrip.destName, activeTrip.fare);
+      navigator.clipboard?.writeText(text).then(() => showToast("Offer disalin! (Harga di hujung)"));
+    }
+
+    function copyCarDetails() {
+      const text = `Boleh! Kereta saya ${driverProfile.carModel} ${driverProfile.carColor} (No. Plat: ${driverProfile.plateNumber}). OTW sekarang ya!`;
+      navigator.clipboard?.writeText(text).then(() => showToast("Mesej OTW kereta disalin!"));
+    }
+
+    function copyArrivedMsg() {
+      const from = activeTrip?.originName || "lokasi ambil";
+      const text = `Saya dah sampai depan ${from} ya. Kereta ${driverProfile.carModel} ${driverProfile.carColor} (${driverProfile.plateNumber}).`;
+      navigator.clipboard?.writeText(text).then(() => showToast("Mesej 'Saya Dah Sampai' disalin!"));
+    }
+
+    function toggleMoreDrawer() {
+      const drawer = document.getElementById('moreDrawer');
+      const txt = document.getElementById('moreToggleText');
+      if (!drawer) return;
+      const opening = drawer.classList.contains('hidden');
+      drawer.classList.toggle('hidden');
+      if (txt) txt.textContent = opening ? "▲ Tutup Pilihan Tambahan" : "⋯ Lagi (Google Maps, wa.me, Kira KM Luar)";
+    }
+
+    // Off-Campus Drawer Helpers
+    function setTrafficLevel(lvl) {
+      currentTrafficLevel = lvl;
+      ['lancar', 'sederhana', 'sesak'].forEach(k => {
+        const id = k === 'lancar' ? 'trafficBtnLancar' : (k === 'sederhana' ? 'trafficBtnSederhana' : 'trafficBtnSesak');
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.borderColor = (k === lvl) ? 'var(--amber)' : 'var(--border-strong)';
+        el.style.color = (k === lvl) ? '#fcd34d' : '#cbd5e1';
+      });
+      recalcCustomEstimate();
+    }
+
+    function adjustCustomEstimateKm(delta) {
+      const kmEl = document.getElementById('customKmInput');
+      const minEl = document.getElementById('customMinInput');
+      if (!kmEl) return;
+      const val = Math.max(1, (parseInt(kmEl.value, 10) || 10) + delta);
+      kmEl.value = val;
+      if (minEl) minEl.value = Math.max(5, Math.round(val * 1.5));
+      recalcCustomEstimate();
+    }
+
+    function adjustCustomEstimateMin(delta) {
+      const minEl = document.getElementById('customMinInput');
+      if (!minEl) return;
+      minEl.value = Math.max(3, (parseInt(minEl.value, 10) || 15) + delta);
+      recalcCustomEstimate();
+    }
+
+    function recalcCustomEstimatePreviewOnly() {
+      const km = parseInt(document.getElementById('customKmInput')?.value, 10) || 10;
+      const mins = parseInt(document.getElementById('customMinInput')?.value, 10) || 15;
+      const isPeak = document.getElementById('peakHourToggle')?.checked || false;
+      const est = calculateDynamicUnlistedFare(km, mins, currentTrafficLevel, isPeak);
+      const el = document.getElementById('customEstFareText');
+      if (el) el.textContent = est;
+      return est;
+    }
+
+    function recalcCustomEstimate() {
+      recalcCustomEstimatePreviewOnly();
+    }
+
+    function applyCustomEstimateToActive() {
+      if (!activeTrip) return;
+      activeTrip.fare = recalcCustomEstimatePreviewOnly();
+      renderActiveCockpit();
+      showToast(`Harga dikemaskini ke RM${activeTrip.fare}`);
+    }
+
+    // Navigation Launchers
+    function openActiveWaze(side) {
+      if (!activeTrip) return;
+      const q = side === 'pickup' ? activeTrip.pickupQuery : activeTrip.dropoffQuery;
+      window.open(`https://waze.com/ul?q=${encodeURIComponent(q)}&navigate=yes`, '_blank');
+    }
+
+    function openActiveMaps(mode) {
+      if (!activeTrip) return;
+      const pQ = activeTrip.pickupQuery;
+      const dQ = activeTrip.dropoffQuery;
+      if (mode === 'pickup') {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pQ)}&travelmode=driving`, '_blank');
+      } else if (mode === 'dropoff') {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dQ)}&travelmode=driving`, '_blank');
+      } else if (mode === 'traffic') {
+        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(pQ)}&destination=${encodeURIComponent(dQ)}&travelmode=driving`, '_blank');
+      } else {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dQ)}&waypoints=${encodeURIComponent(pQ)}&travelmode=driving`, '_blank');
+      }
+    }
+
+    // =============================================================
+    // 10. VIEW SWITCHER (3 Bottom Tabs)
+    // =============================================================
+    function switchView(view) {
+      const views = {
+        snipe: document.getElementById('sniperView'),
+        rates: document.getElementById('rateCardView'),
+        car: document.getElementById('carSettingsView')
+      };
+      const btns = {
+        snipe: document.getElementById('tabSniperBtn'),
+        rates: document.getElementById('tabRatesBtn'),
+        car: document.getElementById('tabCarBtn')
+      };
+
+      const key = views[view] ? view : 'snipe';
+      Object.keys(views).forEach(k => {
+        if (views[k]) views[k].classList.toggle('hidden', k !== key);
+        if (btns[k]) btns[k].classList.toggle('active', k === key);
+      });
+      if (key === 'car') updateCarLivePreview();
+      if (key === 'rates') updateEarningsDisplay();
+    }
+
+    // =============================================================
+    // 11. DAILY EARNINGS TRACKER (Duplicate Guard + Inline Toast Undo)
+    // =============================================================
+    function getLocalDateKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function getStoredEarnings() {
+      const todayStr = getLocalDateKey();
+      try {
+        const data = JSON.parse(localStorage.getItem('upm_cab_earnings') || '{}');
+        if (data.date === todayStr) {
+          return {
+            date: todayStr,
+            total: Number(data.total) || 0,
+            count: Number(data.count) || 0,
+            history: Array.isArray(data.history) ? data.history : []
+          };
+        }
+      } catch (e) {}
+      return { date: todayStr, total: 0, count: 0, history: [] };
+    }
+
+    function saveEarnings(data) {
+      try { localStorage.setItem('upm_cab_earnings', JSON.stringify(data)); } catch (e) {}
+      updateEarningsDisplay();
+    }
+
+    function updateEarningsDisplay() {
+      const data = getStoredEarnings();
+      document.getElementById('todayEarnings').textContent = data.total;
+      document.getElementById('todayTripCount').textContent = data.count;
+      const tDisp = document.getElementById('logTotalDisplay');
+      const cDisp = document.getElementById('logCountDisplay');
+      if (tDisp) tDisp.textContent = data.total;
+      if (cDisp) cDisp.textContent = data.count;
+
+      const listEl = document.getElementById('tripHistoryList');
+      if (listEl) {
+        if (data.history.length === 0) {
+          listEl.textContent = "Belum ada trip direkod hari ini.";
+        } else {
+          listEl.innerHTML = data.history.slice().reverse().map(entry => {
+            if (typeof entry === 'number') {
+              return `<div class="trip-row"><span>Trip UPM</span><strong style="color:#34d399;">RM ${entry}</strong></div>`;
+            }
+            return `<div class="trip-row"><span>${escapeHtml(entry.route || 'Trip UPM')} <span style="color:var(--text-dim);">(${escapeHtml(entry.time || '')})</span></span><strong style="color:#34d399;">RM ${Number(entry.fare) || 0}</strong></div>`;
+          }).join('');
+        }
+      }
+    }
+
+    function recordActiveTrip() {
+      if (!activeTrip) return;
+      const fare = parseInt(activeTrip.fare, 10) || 0;
+      if (fare <= 0) return;
+
+      if (activeTrip.logged) {
+        showToast("Trip ini sudah dicatat!", true);
+        return;
+      }
+
+      const data = getStoredEarnings();
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      data.total += fare;
+      data.count += 1;
+      data.history.push({
+        fare,
+        route: `${activeTrip.originName} ➔ ${activeTrip.destName}`,
+        time: timeStr
+      });
+      activeTrip.logged = true;
+      saveEarnings(data);
+      renderActiveCockpit();
+      showToast(`+RM${fare} direkod!`, true);
+    }
+
+    function undoLastTrip() {
+      const data = getStoredEarnings();
+      if (data.count <= 0) {
+        showToast("Tiada rekod trip untuk di-undo.");
+        return;
+      }
+      const last = data.history.length > 0 ? data.history.pop() : null;
+      const lastFare = typeof last === 'number' ? last : (last?.fare ? Number(last.fare) : Math.round(data.total / data.count));
+      data.total = Math.max(0, data.total - lastFare);
+      data.count = Math.max(0, data.count - 1);
+      if (activeTrip) activeTrip.logged = false;
+      saveEarnings(data);
+      renderActiveCockpit();
+      showToast(`Undo -RM${lastFare}. Baki: RM${data.total}`);
+    }
+
+    function resetEarnings() {
+      if (confirm("Padam semua rekod pendapatan hari ini?")) {
+        if (activeTrip) activeTrip.logged = false;
+        saveEarnings({ date: getLocalDateKey(), total: 0, count: 0, history: [] });
+        renderActiveCockpit();
+        showToast("Rekod pendapatan direset.");
+      }
+    }
+
+    // =============================================================
+    // 12. RATE FILTER, TOAST WITH UNDO, & HELPERS
+    // =============================================================
+    function filterRates() {
+      const q = (document.getElementById('rateSearchInput')?.value || '').toLowerCase();
+      document.querySelectorAll('.rate-card-category').forEach(cat => {
+        let any = false;
+        cat.querySelectorAll('.rate-item').forEach(item => {
+          const match = item.textContent.toLowerCase().includes(q);
+          item.style.display = match ? 'flex' : 'none';
+          if (match) any = true;
+        });
+        cat.style.display = any ? 'block' : 'none';
+      });
+    }
+
+    let toastTimer = null;
+    function showToast(msg, withUndo) {
+      const toast = document.getElementById('toast');
+      const msgEl = document.getElementById('toastMsg');
+      const undoBtn = document.getElementById('toastUndoBtn');
+      if (!toast || !msgEl) return;
+      msgEl.textContent = msg;
+      if (undoBtn) undoBtn.classList.toggle('hidden', !withUndo);
+      toast.classList.add('show');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(hideToast, withUndo ? 4500 : 2400);
+    }
+
+    function hideToast() {
+      document.getElementById('toast')?.classList.remove('show');
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function playChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      } catch (e) {}
+    }
+
+    // =============================================================
+    // 13. CONDITIONAL LIVE SSE STREAM (Only Local / LAN Server)
+    // =============================================================
+    function isLocalServerHost() {
+      const h = window.location.hostname || '';
+      return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.trycloudflare.com') || /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(h);
+    }
+
+    function connectLiveSniperStream() {
+      if (window.location.protocol === 'file:' || !isLocalServerHost()) return;
+      try {
+        const evtSource = new EventSource('/events');
+        evtSource.onopen = () => {
+          document.getElementById('liveSseSection')?.classList.remove('hidden');
+          const b = document.getElementById('sseStatusBadge');
+          if (b) b.textContent = "🟢 Live Connected";
+        };
+        evtSource.onmessage = (event) => {
+          try { handleLiveLead(JSON.parse(event.data)); } catch (e) {}
+        };
+      } catch (e) {}
+    }
+
+    function handleLiveLead(lead) {
+      playChime();
+      document.getElementById('liveSseSection')?.classList.remove('hidden');
+      const container = document.getElementById('liveFeedContainer');
+      if (!container) return;
+
+      const fare = lead.fare || computeFareForPair(lead.pKey || cleanLocationInput(lead.from), lead.dKey || cleanLocationInput(lead.to), lead.from, lead.to);
+      const cleanPhone = normalizeMalaysianPhone(lead.phone || '');
+      const offerMsg = formatOfferText(lead.from || '?', lead.to || '?', fare);
+
+      const card = document.createElement('div');
+      card.className = "feed-card";
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+          <div>
+            <div style="font-size:12.5px; font-weight:800; color:#fff;">${escapeHtml(lead.from || '?')} ➔ ${escapeHtml(lead.to || '?')}</div>
+            <div style="font-size:10.5px; color:var(--text-muted);">👥 ${escapeHtml(lead.pax || 1)} Pax • ⏰ ${escapeHtml(lead.time || 'now')}</div>
+          </div>
+          <div style="font-size:14px; font-weight:800; color:#34d399;">RM ${fare}</div>
+        </div>
+      `;
+
+      const row = document.createElement('div');
+      row.style.cssText = "display:flex; gap:6px;";
+
+      if (cleanPhone || lead.contactUrl) {
+        const a = document.createElement('a');
+        a.href = buildWhatsAppHref(cleanPhone, offerMsg, lead.contactUrl || '');
+        a.className = "mini-btn";
+        a.style.cssText = "flex:1; background:var(--emerald-dark); color:#fff; border:0; font-weight:800;";
+        a.textContent = `🟢 WhatsApp (RM${fare})`;
+        row.appendChild(a);
+      }
+
+      const loadBtn = document.createElement('button');
+      loadBtn.type = "button";
+      loadBtn.className = "mini-btn";
+      loadBtn.textContent = "🎯 Buka";
+      loadBtn.onclick = () => {
+        const input = document.getElementById('rawLeadInput');
+        if (input) {
+          input.value = lead.raw || `From: ${lead.from}\nTo: ${lead.to}\nTime: ${lead.time}\nPax: ${lead.pax}\n${cleanPhone}`;
+          setCockpitMode('snipe');
+          parseRawLead();
+          window.scrollTo?.({ top: 0, behavior: 'smooth' });
+        }
+      };
+      row.appendChild(loadBtn);
+
+      card.appendChild(row);
+      container.prepend(card);
+    }
+
+    // =============================================================
+    // 14. INIT, WEB SHARE TARGET & SERVICE WORKER
+    // =============================================================
+    function checkSharedLeadQuery() {
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join('\n').trim();
+        if (shared) {
+          const input = document.getElementById('rawLeadInput');
+          if (input) input.value = shared;
+          setCockpitMode('snipe');
+          parseRawLead();
+          showToast("Mesej dari Telegram Share dianalisis!");
+        }
+      } catch (e) {}
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      populateLocationSelect('pickupSelect', 'k12_serumpun', '');
+      populateLocationSelect('dropoffSelect', 'mrt_upm', '');
+      loadDriverProfile();
+      initWaRedirectModeUI();
+      initPeakHour();
+      updateEarningsDisplay();
+      updateStagingRadar();
+      connectLiveSniperStream();
+      checkSharedLeadQuery();
+
+      if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+      setInterval(updateStagingRadar, 60000);
+    });
+  </script>
+</body>
+</html>
